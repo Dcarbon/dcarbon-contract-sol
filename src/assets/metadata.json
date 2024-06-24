@@ -1,0 +1,24 @@
+{
+  "name": "Dcarbon Something",
+  "symbol": "DCST",
+  "description": "This test about dcarbon fungible asset",
+  "image": "https://arweave.net/eJX2Xi-wzkNh6zRXQsx9wEKTq3E6P5bdoZKvWQ3XHzE",
+  "attributes": [
+    {
+      "trait_type": "attack",
+      "value": "4"
+    },
+    {
+      "trait_type": "defense",
+      "value": "3"
+    },
+    {
+      "trait_type": "durability",
+      "value": "47"
+    },
+    {
+      "trait_type": "components",
+      "value": "iron: 10; carbon: 1; wood: 2"
+    }
+  ]
+}

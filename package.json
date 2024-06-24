@@ -2,6 +2,7 @@
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
+    "demo": "yarn ts-node src/demo.ts",
     "prepare": "husky install",
     "postinstall": "husky install",
     "format:check": "prettier --check \"*/**/*.ts\"",
