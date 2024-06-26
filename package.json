@@ -2,7 +2,12 @@
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "demo": "yarn ts-node src/demo.ts"
+    "demo": "yarn ts-node src/demo.ts",
+    "prepare": "husky install",
+    "postinstall": "husky install",
+    "format:check": "prettier --check \"*/**/*.ts\"",
+    "format:fix": "prettier --write \"*/**/*.ts\"",
+    "format:fixall": "npm run lint:fix && npm run format:fix"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.600.0",
