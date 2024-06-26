@@ -24,6 +24,9 @@ import {
 import {ASSOCIATED_PROGRAM_ID, associatedAddress, TOKEN_PROGRAM_ID} from "@coral-xyz/anchor/dist/cjs/utils/token";
 import {generateRandomObjectId} from "./utils";
 import {createAccount} from "../src/utils";
+import * as bs58 from 'bs58'
+import * as dotenv from "dotenv";
+dotenv.config()
 
 type Project = IdlTypes<DcarbonContract>['project']
 
@@ -143,12 +146,12 @@ describe("dcarbon-contract", () => {
 
         const mintArgs: MintArgsArgs = {
             __kind: "V1",
-            amount: 1,
+            amount: 5,
             authorizationData: null
         }
 
         const receiver = Keypair.generate()
-
+        console.log('Public Key: ', receiver.publicKey)
         await createAccount({
             provider: anchorProvider,
             newAccountKeypair: receiver,
@@ -182,7 +185,7 @@ describe("dcarbon-contract", () => {
         console.log('Mint SFT: ', tx)
     })
 
-    it('Transform SFT to FT', async () => {
+    xit('Transform SFT to FT', async () => {
         const fungibleToken = new PublicKey('f5p4t6kbLSH7zJnxg8fMcAh5aec5zgLBffkm5qP1koR')
 
         const {project, mint, metadata} = await registerProject()
@@ -280,6 +283,191 @@ describe("dcarbon-contract", () => {
         console.log('Transform SFT to FT: ', sig)
     })
 
+    xit('Demo Register and Mint SFT', async () => {
+
+        const metadataPrj1 = {
+            name: 'Project 1',
+            symbol: 'PT1',
+            uri: "https://dev-bucket.kyupad.xyz/public/metadata/spl-token/metadata_project_1.json"
+        }
+
+        const metadataPrj2 = {
+            name: 'Project 2',
+            symbol: 'PT2',
+            uri: "https://dev-bucket.kyupad.xyz/public/metadata/spl-token/metadata_project_2.json"
+        }
+
+        const {project, mint, metadata} = await registerProject(metadataPrj1)
+        const {project: project2, mint: mint2, metadata: metadata2} = await registerProject(metadataPrj2)
+
+        const mintArgs: MintArgsArgs = {
+            __kind: "V1",
+            amount: 5,
+            authorizationData: null
+        }
+
+        const receiver = Keypair.fromSecretKey(bs58.decode(process.env.PROJECT_1_PRIVATE_KEY))
+
+        const toAta = associatedAddress({
+            mint: mint.publicKey,
+            owner: receiver.publicKey
+        })
+
+        const serialize = getMintArgsSerializer()
+        const data = serialize.serialize(mintArgs)
+
+        const tx = await program.methods.mintSft(project.id, Buffer.from(data))
+            .accounts({
+                signer: anchorProvider.wallet.publicKey,
+                receiver: receiver.publicKey,
+                toAta,
+                mint: mint.publicKey,
+                metadata: metadata,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
+                tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+                ataProgram: ASSOCIATED_PROGRAM_ID
+            })
+            .rpc({
+                skipPreflight: true
+            })
+
+        console.log('Mint SFT Project 1: ', tx)
+
+        const toAta2 = associatedAddress({
+            mint: mint2.publicKey,
+            owner: receiver.publicKey
+        })
+
+        const tx2 = await program.methods.mintSft(project2.id, Buffer.from(data))
+            .accounts({
+                signer: anchorProvider.wallet.publicKey,
+                receiver: receiver.publicKey,
+                toAta: toAta2,
+                mint: mint2.publicKey,
+                metadata: metadata2,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
+                tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+                ataProgram: ASSOCIATED_PROGRAM_ID
+            })
+            .rpc({
+                skipPreflight: true
+            })
+
+        console.log('Mint SFT Project 2: ', tx2)
+    })
+
+    xit('Demo burn', async () => {
+        const fungibleToken = new PublicKey('f5p4t6kbLSH7zJnxg8fMcAh5aec5zgLBffkm5qP1koR')
+        const receiver = Keypair.fromSecretKey(bs58.decode(process.env.PROJECT_1_PRIVATE_KEY))
+        const mint = new PublicKey("CCH2vkWhaqrmu59UrTyNSRwpYH8Y6msYN73mZ4FTovDv")
+        const mint2 = new PublicKey("89XTmi1C6ekJq2McK8UekGQcEhkaFCRw7uFt8PnSAXD3")
+
+        const [metadata] = PublicKey.findProgramAddressSync(
+            [
+                Buffer.from('metadata'),
+                TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+                mint.toBuffer(),
+            ],
+            TOKEN_METADATA_PROGRAM_ID
+        );
+
+        const [metadata2] = PublicKey.findProgramAddressSync(
+            [
+                Buffer.from('metadata'),
+                TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+                mint2.toBuffer(),
+            ],
+            TOKEN_METADATA_PROGRAM_ID
+        );
+
+        const burnAta = associatedAddress({
+            mint: mint,
+            owner: receiver.publicKey
+        })
+
+        const burnAta2 = associatedAddress({
+            mint: mint2,
+            owner: receiver.publicKey
+        })
+
+
+        const burnArgs: BurnArgsArgs = {
+            __kind: 'V1',
+            amount: 2
+        }
+
+        const toAta = associatedAddress({
+            mint: fungibleToken,
+            owner: receiver.publicKey
+        })
+
+        const [metadataFt] = PublicKey.findProgramAddressSync(
+            [
+                Buffer.from('metadata'),
+                TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+                fungibleToken.toBuffer(),
+            ],
+            TOKEN_METADATA_PROGRAM_ID
+        );
+
+        const mintArgs: MintArgsArgs = {
+            __kind: "V1",
+            amount: 2 * 10 ** 9,
+            authorizationData: null
+        }
+
+        const serialize = getMintArgsSerializer()
+
+        const transformIns = await program.methods
+            .transform(Buffer.from(getBurnArgsSerializer().serialize(burnArgs)), Buffer.from(serialize.serialize(mintArgs)))
+            .accounts({
+                signer: anchorProvider.wallet.publicKey,
+                receiver: receiver.publicKey,
+                burnAta: burnAta,
+                toAta: toAta,
+                mintSft: mint,
+                mintFt: fungibleToken,
+                metadataSft: metadata,
+                metadataFt: metadataFt,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
+                tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+                ataProgram: ASSOCIATED_PROGRAM_ID
+            })
+            .signers([receiver])
+            .instruction()
+
+        const transformIns2 = await program.methods
+            .transform(Buffer.from(getBurnArgsSerializer().serialize(burnArgs)), Buffer.from(serialize.serialize(mintArgs)))
+            .accounts({
+                signer: anchorProvider.wallet.publicKey,
+                receiver: receiver.publicKey,
+                burnAta: burnAta2,
+                toAta: toAta,
+                mintSft: mint2,
+                mintFt: fungibleToken,
+                metadataSft: metadata2,
+                metadataFt: metadataFt,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
+                tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+                ataProgram: ASSOCIATED_PROGRAM_ID
+            })
+            .signers([receiver])
+            .instruction()
+
+        const transactionV0 = new Transaction().add(transformIns)
+        // transactionV0.add(transformIns2)
+
+        const sig = await anchorProvider.sendAndConfirm(transactionV0, [receiver], {
+            skipPreflight: true,
+        });
+
+        console.log('Transform SFT to FT: ', sig)
+    })
+
     xit('Create lookup Table', async () => {
         // Init lookup table adđress
         const slot = await anchorProvider.connection.getSlot();
@@ -317,7 +505,7 @@ describe("dcarbon-contract", () => {
 
     })
 
-    const registerProject = async () => {
+    const registerProject = async (metadataObj?: any) => {
         const [authority] = PublicKey.findProgramAddressSync([Buffer.from('authority')], program.programId)
         const creator: CreatorArgs = {
             address: publicKey(authority.toString()),
@@ -327,13 +515,14 @@ describe("dcarbon-contract", () => {
 
         const createArgsVec: CreateArgsArgs = {
             __kind: "V1",
-            name: 'DCarbon Project Test',
-            symbol: "DCPT",
-            uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
+            name: metadataObj ? metadataObj.name : 'Project 1',
+            symbol: metadataObj ? metadataObj.symbol : "P1T",
+            uri: metadataObj ? metadataObj.uri : 'https://dev-bucket.kyupad.xyz/public/metadata/spl-token/metadata_project_1.json',
             sellerFeeBasisPoints: percentAmount(5.5),
             decimals: some(0),
             creators: [creator],
-            tokenStandard: TokenStandard.FungibleAsset
+            tokenStandard: TokenStandard.FungibleAsset,
+            collection: null
         }
 
         const mint = Keypair.generate()

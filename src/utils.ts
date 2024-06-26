@@ -1,5 +1,5 @@
 import Arweave from 'arweave';
-import {Connection, Keypair, SystemProgram, Transaction} from "@solana/web3.js";
+import {Keypair, SystemProgram, Transaction} from "@solana/web3.js";
 import {AnchorProvider} from "@coral-xyz/anchor";
 
 
@@ -12,13 +12,11 @@ export async function uploadData(metadata: any, isImage: boolean) {
             timeout: 20000,
             logging: false,
         });
-
-        const wallet = JSON.parse(process.env.VITE_ARWEAVE_KEY);
+        const wallet = JSON.parse(process.env.ARWEAVE_KEY);
         const metadataRequest = JSON.stringify(metadata);
-
         const metadataTransaction = await arweave.createTransaction({
             data: isImage ? metadata : metadataRequest,
-        });
+        }, wallet);
 
         if (isImage) {
             metadataTransaction.addTag('Contet-Type', 'image/png');
@@ -69,7 +67,7 @@ export const createAccount = async ({
     tx.feePayer = provider.wallet.publicKey;
     tx.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
 
-    const sig = await provider.sendAndConfirm(tx,[newAccountKeypair], {skipPreflight: true})
+    const sig = await provider.sendAndConfirm(tx, [newAccountKeypair], {skipPreflight: true})
 
     console.log(
         `Create account ${newAccountKeypair.publicKey} with ${lamports} lamports: ${sig}`

@@ -1,24 +1,12 @@
 {
-  "name": "Dcarbon Something",
-  "symbol": "DCST",
-  "description": "This test about dcarbon fungible asset",
-  "image": "https://arweave.net/eJX2Xi-wzkNh6zRXQsx9wEKTq3E6P5bdoZKvWQ3XHzE",
+  "name": "Project 2",
+  "symbol": "P2T",
+  "description": "This is project 2",
+  "image": "https://dev-bucket.kyupad.xyz/public/icons/spl-token/P2T.jpg",
   "attributes": [
     {
-      "trait_type": "attack",
-      "value": "4"
-    },
-    {
-      "trait_type": "defense",
-      "value": "3"
-    },
-    {
-      "trait_type": "durability",
-      "value": "47"
-    },
-    {
-      "trait_type": "components",
-      "value": "iron: 10; carbon: 1; wood: 2"
+      "trait_type": "Project Name",
+      "value": "Madlads"
     }
   ]
 }
