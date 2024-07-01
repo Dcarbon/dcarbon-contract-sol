@@ -4,14 +4,14 @@
 resolution = true
 skip-lint = false
 
-[programs.localnet]
+[programs.devnet]
 dcarbon_contract = "bM6u1BRUQiFD1xEDPpqqGMMoLExtnmiPeb8NtXPDtg3"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

@@ -1,0 +1,12 @@
+{
+  "name": "Project 2",
+  "symbol": "P2T",
+  "description": "This is project 2",
+  "image": "https://dev-bucket.kyupad.xyz/public/icons/spl-token/P2T.jpg",
+  "attributes": [
+    {
+      "trait_type": "Project Name",
+      "value": "Madlads"
+    }
+  ]
+}
