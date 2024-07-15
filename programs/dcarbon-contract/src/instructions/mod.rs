@@ -1,9 +1,11 @@
-pub mod register_project;
-pub mod mint_sft;
-pub mod create_mint;
-pub mod transform;
+pub use config::*;
+pub use device::*;
+pub use role::*;
+pub use token::*;
 
-pub use register_project::*;
-pub use mint_sft::*;
-pub use create_mint::*;
-pub use transform::*;
+pub mod device;
+pub mod role;
+pub mod config;
+pub mod token;
+
+

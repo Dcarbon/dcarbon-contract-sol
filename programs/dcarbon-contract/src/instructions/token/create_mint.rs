@@ -42,9 +42,9 @@ pub struct CreateMint<'info> {
     pub creator: Signer<'info>,
 
     #[account(
-    seeds = [b"authority"],
-    bump,
-    owner = ID
+        seeds = [b"authority"],
+        bump,
+        owner = ID
     )]
     /// CHECK:
     pub authority: AccountInfo<'info>,
