@@ -3,15 +3,19 @@ use mpl_token_metadata::instructions::MintCpiBuilder;
 use mpl_token_metadata::types::MintArgs;
 
 use crate::*;
-use crate::state::Project;
+use crate::state::Device;
+use crate::utils::assert_keys_equal;
 
-pub fn mint_sft(ctx: Context<MintSft>, _device_id: String, mint_data_vec: Vec<u8>) -> Result<()> {
+pub fn mint_token(ctx: Context<MintToken>, _project_id: String, _device_id: String, mint_data_vec: Vec<u8>) -> Result<()> {
     let mint = &ctx.accounts.mint;
     let signer = &ctx.accounts.signer;
+    let device = &ctx.accounts.device;
     let token_program = &ctx.accounts.token_program;
     let system_program = &ctx.accounts.system_program;
     let metadata = &ctx.accounts.metadata;
     let authority = &ctx.accounts.authority;
+
+    assert_keys_equal(&device.mint, &mint.key())?;
 
     let seeds: &[&[u8]] = &[b"authority"];
 
@@ -46,8 +50,8 @@ pub fn mint_sft(ctx: Context<MintSft>, _device_id: String, mint_data_vec: Vec<u8
 }
 
 #[derive(Accounts)]
-#[instruction(_device_id: String)]
-pub struct MintSft<'info> {
+#[instruction(_project_id: String, _device_id: String)]
+pub struct MintToken<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
@@ -59,11 +63,11 @@ pub struct MintSft<'info> {
     pub to_ata: AccountInfo<'info>,
 
     #[account(
-        seeds = [Project::PREFIX_SEED, _device_id.as_bytes()],
+        seeds = [Device::PREFIX_SEED, _project_id.as_bytes(), _device_id.as_bytes()],
         bump,
-        owner = ID
+        owner = ID,
     )]
-    pub project: Account<'info, Project>,
+    pub device: Account<'info, Device>,
 
     #[account(
         seeds = [b"authority"],

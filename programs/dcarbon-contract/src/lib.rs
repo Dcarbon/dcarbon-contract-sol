@@ -5,6 +5,7 @@ use instructions::*;
 mod state;
 mod instructions;
 mod error;
+mod utils;
 
 declare_id!("75eELePzbpEwD1tAEvYna5ZJtC26GeU42uF3ycyyTCt2");
 
@@ -62,5 +63,9 @@ pub mod dcarbon_contract {
 
     pub fn set_active(ctx: Context<SetActive>, project_id: String, device_id: String) -> Result<()> {
         instructions::set_active(ctx, project_id, device_id)
+    }
+
+    pub fn mint_token(ctx: Context<MintToken>, project_id: String, device_id: String, mint_data_vec: Vec<u8>) -> Result<()> {
+        instructions::mint_token(ctx, project_id, device_id, mint_data_vec)
     }
 }

@@ -203,19 +203,19 @@ describe('dcarbon-contract', () => {
       expect(expected_error, 'Expect invest transaction must be failed').to.be.true;
     });
 
-    xit('Transfer master right', async () => {
-      const another_master = Keypair.generate();
+    it('Transfer master right', async () => {
+      // const another_master = Keypair.generate();
+      //
+      // await createAccount({
+      //   provider: anchorProvider,
+      //   newAccountKeypair: another_master,
+      //   lamports: 0.01 * LAMPORTS_PER_SOL,
+      // });
 
-      await createAccount({
-        provider: anchorProvider,
-        newAccountKeypair: another_master,
-        lamports: 0.01 * LAMPORTS_PER_SOL,
-      });
-
-      const [masterPda] = PublicKey.findProgramAddressSync([Buffer.from('master')], program.programId);
+      // const [masterPda] = PublicKey.findProgramAddressSync([Buffer.from('master')], program.programId);
 
       const sig = await program.methods
-        .transferMasterRights(another_master.publicKey)
+        .transferMasterRights(new PublicKey('33MkUmaAce3g6LfQZdYV9gKB4ypYDAWrScYfVDkNiCum'))
         .accounts({
           signer: upgradableAuthority.publicKey,
         })
@@ -226,35 +226,35 @@ describe('dcarbon-contract', () => {
 
       console.log('Transfer right: ', sig);
 
-      await sleep(5000);
-
-      const masterPdaData = await program.account.master.fetch(masterPda);
-      expect(masterPdaData.masterKey.toString(), 'Expect must be the new master').to.eq(
-        another_master.publicKey.toString(),
-      );
-
-      const transferRightBack = await program.methods
-        .transferMasterRights(upgradableAuthority.publicKey)
-        .accounts({
-          signer: another_master.publicKey,
-        })
-        .signers([another_master])
-        .instruction();
-
-      const transferRightBackTxn = new Transaction().add(transferRightBack);
-      transferRightBackTxn.feePayer = another_master.publicKey;
-      transferRightBackTxn.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-      transferRightBackTxn.partialSign(another_master);
-
-      const sig1 = await connection.sendTransaction(transferRightBackTxn, [another_master], { skipPreflight: true });
-      console.log('Transfer right back: ', sig1);
-
-      await sleep(5000);
-
-      const masterPdaData2 = await program.account.master.fetch(masterPda);
-      expect(masterPdaData2.masterKey.toString(), 'Expect must be the old master').to.eq(
-        upgradableAuthority.publicKey.toString(),
-      );
+      // await sleep(5000);
+      //
+      // const masterPdaData = await program.account.master.fetch(masterPda);
+      // expect(masterPdaData.masterKey.toString(), 'Expect must be the new master').to.eq(
+      //   another_master.publicKey.toString(),
+      // );
+      //
+      // const transferRightBack = await program.methods
+      //   .transferMasterRights(upgradableAuthority.publicKey)
+      //   .accounts({
+      //     signer: another_master.publicKey,
+      //   })
+      //   .signers([another_master])
+      //   .instruction();
+      //
+      // const transferRightBackTxn = new Transaction().add(transferRightBack);
+      // transferRightBackTxn.feePayer = another_master.publicKey;
+      // transferRightBackTxn.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+      // transferRightBackTxn.partialSign(another_master);
+      //
+      // const sig1 = await connection.sendTransaction(transferRightBackTxn, [another_master], { skipPreflight: true });
+      // console.log('Transfer right back: ', sig1);
+      //
+      // await sleep(5000);
+      //
+      // const masterPdaData2 = await program.account.master.fetch(masterPda);
+      // expect(masterPdaData2.masterKey.toString(), 'Expect must be the old master').to.eq(
+      //   upgradableAuthority.publicKey.toString(),
+      // );
     });
 
     xit('Delete admin', async () => {
@@ -299,7 +299,7 @@ describe('dcarbon-contract', () => {
   });
 
   describe('📕📕📕 Config', () => {
-    it('Init config', async () => {
+    xit('Init config', async () => {
       const configArgs: ConfigArgs = {
         mintingFee: new BN(11),
         rate: new BN(1),

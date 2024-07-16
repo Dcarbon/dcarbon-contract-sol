@@ -2,6 +2,9 @@ use anchor_lang::error_code;
 
 #[error_code]
 pub enum DCarbonError {
+    #[msg("PublicKey Mismatch")]
+    PublicKeyMismatch,
+
     #[msg("The length of the device Id must be equal to 24")]
     InvalidProjectIdLength,
 
