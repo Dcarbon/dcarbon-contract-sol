@@ -6,7 +6,14 @@ use crate::*;
 use crate::state::Device;
 use crate::utils::assert_keys_equal;
 
-pub fn mint_token(ctx: Context<MintToken>, _project_id: String, _device_id: String, mint_data_vec: Vec<u8>) -> Result<()> {
+#[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct MintTokenArgs {
+    project_id: String,
+    device_id: String,
+    mint_data_vec: Vec<u8>,
+}
+
+pub fn mint_token(ctx: Context<MintToken>, mint_token_args: MintTokenArgs) -> Result<()> {
     let mint = &ctx.accounts.mint;
     let signer = &ctx.accounts.signer;
     let device = &ctx.accounts.device;
@@ -25,7 +32,7 @@ pub fn mint_token(ctx: Context<MintToken>, _project_id: String, _device_id: Stri
     let binding = [bump];
     seeds_signer.push(&binding);
 
-    let mint_data = MintArgs::try_from_slice(&mint_data_vec).unwrap();
+    let mint_data = MintArgs::try_from_slice(&mint_token_args.mint_data_vec).unwrap();
 
     MintCpiBuilder::new(&ctx.accounts.token_metadata_program)
         .token(&ctx.accounts.to_ata)
@@ -50,7 +57,7 @@ pub fn mint_token(ctx: Context<MintToken>, _project_id: String, _device_id: Stri
 }
 
 #[derive(Accounts)]
-#[instruction(_project_id: String, _device_id: String)]
+#[instruction(mint_token_args: MintTokenArgs)]
 pub struct MintToken<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -63,7 +70,7 @@ pub struct MintToken<'info> {
     pub to_ata: AccountInfo<'info>,
 
     #[account(
-        seeds = [Device::PREFIX_SEED, _project_id.as_bytes(), _device_id.as_bytes()],
+        seeds = [Device::PREFIX_SEED, mint_token_args.project_id.as_bytes(), mint_token_args.device_id.as_bytes()],
         bump,
         owner = ID,
     )]

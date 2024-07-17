@@ -20,5 +20,5 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 [dependencies]
 anchor-lang = { version = "0.30.0", features = ["init-if-needed"]}
 anchor-spl = { version = "0.30.0", features = ["token"] }
-spl-token = { version = "6.0.0", features = ["no-entrypoint"] }
+spl-token = { version = "4.0.1", features = ["no-entrypoint"] }
 mpl-token-metadata = "4.1.2"

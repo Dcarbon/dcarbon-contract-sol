@@ -38,8 +38,11 @@ pub mod dcarbon_contract {
         instructions::transfer_master_rights(ctx, new_master_address)
     }
 
-    pub fn create_mint(ctx: Context<CreateMint>, create_data_vec: Vec<u8>) -> Result<()> {
-        instructions::create_mint(ctx, create_data_vec)
+    pub fn create_ft<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, CreateFt<'info>>,
+        create_ft_args: CreateFtArgs,
+    ) -> Result<()> {
+        instructions::create_ft(ctx, create_ft_args)
     }
 
     pub fn init_config<'c: 'info, 'info>(
@@ -65,7 +68,7 @@ pub mod dcarbon_contract {
         instructions::set_active(ctx, project_id, device_id)
     }
 
-    pub fn mint_token(ctx: Context<MintToken>, project_id: String, device_id: String, mint_data_vec: Vec<u8>) -> Result<()> {
-        instructions::mint_token(ctx, project_id, device_id, mint_data_vec)
+    pub fn mint_token(ctx: Context<MintToken>, mint_token_args: MintTokenArgs) -> Result<()> {
+        instructions::mint_token(ctx, mint_token_args)
     }
 }

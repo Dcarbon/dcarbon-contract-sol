@@ -8,7 +8,8 @@
     "postinstall": "husky install",
     "format:check": "prettier --check \"*/**/*.ts\"",
     "format:fix": "prettier --write \"*/**/*.ts\"",
-    "format:fixall": "npm run lint:fix && npm run format:fix"
+    "format:fixall": "npm run lint:fix && npm run format:fix",
+    "test": "yarn ts-node src/test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.600.0",
@@ -17,6 +18,7 @@
     "@metaplex-foundation/mpl-token-metadata": "^3.2.1",
     "@metaplex-foundation/umi": "^0.9.2",
     "@metaplex-foundation/umi-bundle-defaults": "^0.9.2",
+    "@solana/spl-token": "^0.4.8",
     "@solana/web3.js": "^1.93.0",
     "arweave": "^1.15.1",
     "bs58": "^5.0.0",

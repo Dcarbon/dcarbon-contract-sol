@@ -1,3 +1,3 @@
-pub use create_mint::*;
+pub use create_ft::*;
 
-pub mod create_mint;
+pub mod create_ft;

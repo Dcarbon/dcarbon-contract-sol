@@ -43,7 +43,7 @@ impl ContractConfig {
         }
 
         // Only perform initialization if not in testing mode
-        if !cfg!(feature = "testing") {
+        if contract_config.data_is_empty() {
             // Create the seeds and bump for PDA address calculation
             let seeds: &[&[u8]] = &[ContractConfig::PREFIX_SEED];
             let (_, bump) = Pubkey::find_program_address(&seeds, &ID);

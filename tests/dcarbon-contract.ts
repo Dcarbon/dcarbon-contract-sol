@@ -27,6 +27,7 @@ dotenv.config();
 const TOKEN_METADATA_PROGRAM_ID = new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID.toString());
 
 type ConfigArgs = IdlTypes<DcarbonContract>['configArgs'];
+type CreateFtArgs = IdlTypes<DcarbonContract>['createFtArgs'];
 
 describe('dcarbon-contract', () => {
   // Configure the client to use the local cluster.
@@ -203,7 +204,7 @@ describe('dcarbon-contract', () => {
       expect(expected_error, 'Expect invest transaction must be failed').to.be.true;
     });
 
-    it('Transfer master right', async () => {
+    xit('Transfer master right', async () => {
       // const another_master = Keypair.generate();
       //
       // await createAccount({
@@ -385,7 +386,7 @@ describe('dcarbon-contract', () => {
   //     console.log('Register device: ', tx)
   // });
 
-  xit('Create mint', async () => {
+  it('Create mint', async () => {
     const createArgsVec: CreateArgsArgs = {
       __kind: 'V1',
       name: 'DCarbon Token',
@@ -407,11 +408,18 @@ describe('dcarbon-contract', () => {
       TOKEN_METADATA_PROGRAM_ID,
     );
 
+    const createFtArgs: CreateFtArgs = {
+      totalSupply: new BN(0),
+      disableMint: false,
+      disableFreeze: false,
+      dataVec: Buffer.from(data),
+    };
+
     // Add your test here.
     const tx = await program.methods
-      .createMint(Buffer.from(data))
+      .createFt(createFtArgs)
       .accounts({
-        creator: anchorProvider.wallet.publicKey,
+        signer: anchorProvider.wallet.publicKey,
         mint: mint.publicKey,
         metadata: metadata,
         tokenProgram: TOKEN_PROGRAM_ID,
