@@ -16,7 +16,7 @@ import {
   SYSVAR_INSTRUCTIONS_PUBKEY,
   Transaction,
 } from '@solana/web3.js';
-import { ASSOCIATED_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
+import { ASSOCIATED_PROGRAM_ID, associatedAddress, TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
 import { createAccount, sleep } from './utils';
 import * as dotenv from 'dotenv';
 import { expect } from 'chai';
@@ -409,11 +409,18 @@ describe('dcarbon-contract', () => {
     );
 
     const createFtArgs: CreateFtArgs = {
-      totalSupply: new BN(0),
-      disableMint: false,
-      disableFreeze: false,
+      totalSupply: new BN(100 * 10 ** 9),
+      disableMint: true,
+      disableFreeze: true,
       dataVec: Buffer.from(data),
     };
+
+    const [authority] = PublicKey.findProgramAddressSync([Buffer.from('authority')], program.programId);
+
+    const toAta = associatedAddress({
+      mint: mint.publicKey,
+      owner: authority,
+    });
 
     // Add your test here.
     const tx = await program.methods
@@ -427,6 +434,18 @@ describe('dcarbon-contract', () => {
         tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
       })
       .signers([mint])
+      .remainingAccounts([
+        {
+          pubkey: toAta,
+          isWritable: true,
+          isSigner: false,
+        },
+        {
+          pubkey: ASSOCIATED_PROGRAM_ID,
+          isWritable: false,
+          isSigner: false,
+        },
+      ])
       .rpc({
         skipPreflight: true,
       });

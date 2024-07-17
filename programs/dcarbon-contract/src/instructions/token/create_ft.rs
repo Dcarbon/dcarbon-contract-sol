@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use mpl_token_metadata::instructions::{CreateCpiBuilder, MintCpiBuilder};
 use mpl_token_metadata::types::{CreateArgs, MintArgs};
 use spl_token::instruction::{AuthorityType, set_authority};
-use spl_token::solana_program::program::invoke;
+use spl_token::solana_program::program::invoke_signed;
 
 use crate::ID;
 use crate::state::Master;
@@ -49,36 +49,7 @@ pub fn create_ft<'c: 'info, 'info>(
         .create_args(create_data)
         .invoke_signed(&[seeds_signer])?;
 
-    // check if disable mint auth
-    if create_ft_args.disable_mint {
-        invoke(
-            &set_authority(
-                &token_program.key(),
-                &mint.key(),
-                None,
-                AuthorityType::MintTokens,
-                &mint.key(),
-                &[],
-            )?,
-            &[],
-        )?;
-    }
-
-    // check if disable freeze auth
-    if create_ft_args.disable_freeze {
-        invoke(
-            &set_authority(
-                &token_program.key(),
-                &mint.key(),
-                None,
-                AuthorityType::FreezeAccount,
-                &mint.key(),
-                &[],
-            )?,
-            &[],
-        )?;
-    }
-
+    // check supply
     match create_ft_args.total_supply {
         None => {}
         Some(supply) => {
@@ -91,12 +62,11 @@ pub fn create_ft<'c: 'info, 'info>(
                 let remaining_accounts_iter = &mut ctx.remaining_accounts.iter();
 
                 let to_ata = next_account_info(remaining_accounts_iter).unwrap();
-                let receiver = next_account_info(remaining_accounts_iter).unwrap();
                 let ata_program = next_account_info(remaining_accounts_iter).unwrap();
 
                 MintCpiBuilder::new(&ctx.accounts.token_metadata_program)
                     .token(to_ata)
-                    .token_owner(Some(receiver))
+                    .token_owner(Some(authority))
                     .metadata(metadata)
                     .master_edition(None)
                     .token_record(None)
@@ -115,6 +85,47 @@ pub fn create_ft<'c: 'info, 'info>(
             }
         }
     }
+
+    // check if disable mint auth
+    if create_ft_args.disable_mint {
+        invoke_signed(
+            &set_authority(
+                &token_program.key(),
+                &mint.key(),
+                None,
+                AuthorityType::MintTokens,
+                &authority.key(),
+                &[],
+            )?,
+            &[
+                mint.to_account_info(),
+                token_program.clone(),
+                authority.clone()
+            ],
+            &[seeds_signer],
+        )?;
+    }
+
+    // check if disable freeze auth
+    if create_ft_args.disable_freeze {
+        invoke_signed(
+            &set_authority(
+                &token_program.key(),
+                &mint.key(),
+                None,
+                AuthorityType::FreezeAccount,
+                &authority.key(),
+                &[],
+            )?,
+            &[
+                mint.to_account_info(),
+                token_program.clone(),
+                authority.clone()
+            ],
+            &[seeds_signer],
+        )?;
+    }
+
     Ok(())
 }
 
