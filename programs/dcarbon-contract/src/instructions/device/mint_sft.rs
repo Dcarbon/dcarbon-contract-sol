@@ -1,19 +1,29 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::secp256k1_recover::secp256k1_recover;
 use mpl_token_metadata::instructions::MintCpiBuilder;
 use mpl_token_metadata::types::MintArgs;
 
 use crate::*;
-use crate::state::Device;
+use crate::error::DCarbonError;
+use crate::state::{Device, DeviceStatus};
 use crate::utils::assert_keys_equal;
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct MintTokenArgs {
+pub struct MintSftArgs {
     project_id: String,
     device_id: String,
     mint_data_vec: Vec<u8>,
 }
 
-pub fn mint_token(ctx: Context<MintToken>, mint_token_args: MintTokenArgs) -> Result<()> {
+#[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct VerifyMessageArgs {
+    hash: Vec<u8>,
+    recovery_id: u8,
+    signature: Vec<u8>,
+    expected: Vec<u8>,
+}
+
+pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_message_args: VerifyMessageArgs) -> Result<()> {
     let mint = &ctx.accounts.mint;
     let signer = &ctx.accounts.signer;
     let device = &ctx.accounts.device;
@@ -21,8 +31,26 @@ pub fn mint_token(ctx: Context<MintToken>, mint_token_args: MintTokenArgs) -> Re
     let system_program = &ctx.accounts.system_program;
     let metadata = &ctx.accounts.metadata;
     let authority = &ctx.accounts.authority;
+    let device_status = &ctx.accounts.device_status;
 
+    // check mint key with device mint
     assert_keys_equal(&device.mint, &mint.key())?;
+
+    // check is active
+    if !device_status.is_active {
+        return Err(DCarbonError::DeviceIsNotActive.into());
+    }
+
+    // // verify message
+    // let offsets = SecpSignatureOffsets {
+    //     signature_offset: signature_offset as u16,
+    //     signature_instruction_index: 0,
+    //     eth_address_offset: eth_address_offset as u16,
+    //     eth_address_instruction_index: 0,
+    //     message_data_offset: message_data_offset as u16,
+    //     message_data_size: message_arr.len() as u16,
+    //     message_instruction_index: 0,
+    // };
 
     let seeds: &[&[u8]] = &[b"authority"];
 
@@ -32,11 +60,11 @@ pub fn mint_token(ctx: Context<MintToken>, mint_token_args: MintTokenArgs) -> Re
     let binding = [bump];
     seeds_signer.push(&binding);
 
-    let mint_data = MintArgs::try_from_slice(&mint_token_args.mint_data_vec).unwrap();
+    let mint_data = MintArgs::try_from_slice(&mint_sft_args.mint_data_vec).unwrap();
 
     MintCpiBuilder::new(&ctx.accounts.token_metadata_program)
         .token(&ctx.accounts.to_ata)
-        .token_owner(Some(&ctx.accounts.receiver))
+        .token_owner(Some(&ctx.accounts.destination))
         .metadata(metadata)
         .master_edition(None)
         .token_record(None)
@@ -57,24 +85,37 @@ pub fn mint_token(ctx: Context<MintToken>, mint_token_args: MintTokenArgs) -> Re
 }
 
 #[derive(Accounts)]
-#[instruction(mint_token_args: MintTokenArgs)]
-pub struct MintToken<'info> {
-    #[account(mut)]
+#[instruction(mint_sft_args: MintSftArgs)]
+pub struct MintSft<'info> {
+    #[account(
+        mut,
+        constraint = signer.key() == device.minter,
+    )]
     pub signer: Signer<'info>,
 
     /// CHECK:
-    pub receiver: AccountInfo<'info>,
+    #[account(
+        constraint = destination.key() == device.destination
+    )]
+    pub destination: AccountInfo<'info>,
 
     #[account(mut)]
     /// CHECK:
     pub to_ata: AccountInfo<'info>,
 
     #[account(
-        seeds = [Device::PREFIX_SEED, mint_token_args.project_id.as_bytes(), mint_token_args.device_id.as_bytes()],
+        seeds = [Device::PREFIX_SEED, mint_sft_args.project_id.as_bytes(), mint_sft_args.device_id.as_bytes()],
         bump,
         owner = ID,
     )]
     pub device: Account<'info, Device>,
+
+    #[account(
+        seeds = [DeviceStatus::PREFIX_SEED, device.key().as_ref()],
+        bump,
+        owner = ID,
+    )]
+    pub device_status: Account<'info, DeviceStatus>,
 
     #[account(
         seeds = [b"authority"],

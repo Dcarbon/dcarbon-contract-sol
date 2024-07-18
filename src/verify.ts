@@ -159,6 +159,59 @@ const createTransaction = async (message: any, fullSig: string): Promise<void> =
   }
 };
 
+export const prepareParams = () => {
+  const metadata = {
+    iot: '0x4d0155c687739bce9440ffb8aba911b00b21ea56',
+    amount: '0x00',
+    nonce: 1,
+    signed: 'skN4F+Ebh3ShbfySpMCy+zfyrz8VwYUzdDo6RD+Ed4I8ItawaFZ2MYGSRd/6yXALOeOqsNIzsiOBufCI3shh4xw=',
+  };
+
+  const fullSig = '0x' + Buffer.from(metadata.signed, 'base64').toString('hex');
+
+  const message = {
+    iot: metadata.iot,
+    amount: metadata.amount,
+    nonce: metadata.nonce,
+  };
+
+  try {
+    // Define the EIP-712 domain
+    const domain = {
+      name: 'Carbon',
+      version: '1',
+      chainId: 1337,
+      verifyingContract: '0x9C399C33a393334D28e8bA4FFF45296f50F82d1f',
+    };
+
+    const fullSigBytes = ethers.utils.arrayify(fullSig);
+
+    const signature = fullSigBytes.slice(0, 64);
+
+    const recoveryId = fullSigBytes[64] - 27;
+
+    const prefix = Buffer.from('\x19\x01');
+
+    const messageHash = structHash(types.primaryType, message);
+
+    const domainSeparator = structHash('EIP712Domain', domain);
+
+    const hashMessage = Buffer.concat([prefix, domainSeparator, messageHash]);
+
+    const ethAddress = Buffer.from(message.iot.slice(2), 'hex');
+
+    // struct to pass to createInstructionWithEthAddress
+    return {
+      ethAddress: ethAddress,
+      message: hashMessage,
+      signature: signature,
+      recoveryId: recoveryId,
+    };
+  } catch (e) {
+    console.log('Error: ', e.message);
+    console.error(e.stack);
+  }
+};
 const main = async () => {
   const metadata = {
     iot: '0x4d0155c687739bce9440ffb8aba911b00b21ea56',

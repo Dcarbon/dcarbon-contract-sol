@@ -18,15 +18,17 @@ pub struct Device {
     pub mint: Pubkey,
     #[max_len(24)]
     pub project_id: String,
+    pub destination: Pubkey,
+    pub minter: Pubkey,
 }
 
 impl Device {
     pub const PREFIX_SEED: &'static [u8] = b"device";
 
     // check device id length
-    fn validate(&self) -> Result<()> {
+    fn validate(&self, register_device_args: RegisterDeviceArgs) -> Result<()> {
         // check project_id
-        if self.project_id.len() == 24 {
+        if register_device_args.project_id.len() == 24 {
             Ok(())
         } else {
             Err(DCarbonError::InvalidProjectIdLength.into())
@@ -35,12 +37,14 @@ impl Device {
 
     pub fn assign_value(&mut self, register_device_args: RegisterDeviceArgs, mint: Pubkey) -> Result<()> {
         // validate
-        self.validate()?;
+        self.validate(register_device_args.clone())?;
 
         self.id = register_device_args.device_id;
         self.device_type = register_device_args.device_type;
         self.project_id = register_device_args.project_id;
         self.mint = mint.key();
+        self.destination = register_device_args.destination;
+        self.minter = register_device_args.minter;
 
         Ok(())
     }

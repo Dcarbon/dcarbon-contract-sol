@@ -68,7 +68,7 @@ pub mod dcarbon_contract {
         instructions::set_active(ctx, project_id, device_id)
     }
 
-    pub fn mint_token(ctx: Context<MintToken>, mint_token_args: MintTokenArgs) -> Result<()> {
-        instructions::mint_token(ctx, mint_token_args)
+    pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_message_args: VerifyMessageArgs) -> Result<()> {
+        instructions::mint_sft(ctx, mint_sft_args, verify_message_args)
     }
 }

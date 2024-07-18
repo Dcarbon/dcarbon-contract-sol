@@ -16,4 +16,7 @@ pub enum DCarbonError {
 
     #[msg("Contract config account is already init")]
     ContractConfigIsAlreadyInit,
+
+    #[msg("Must active this device to mint semi-fungible token")]
+    DeviceIsNotActive
 }

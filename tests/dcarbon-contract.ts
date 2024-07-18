@@ -4,6 +4,8 @@ import { DcarbonContract } from '../target/types/dcarbon_contract';
 import {
   CreateArgsArgs,
   getCreateArgsSerializer,
+  getMintArgsSerializer,
+  MintArgsArgs,
   MPL_TOKEN_METADATA_PROGRAM_ID,
   TokenStandard,
 } from '@metaplex-foundation/mpl-token-metadata';
@@ -17,17 +19,21 @@ import {
   Transaction,
 } from '@solana/web3.js';
 import { ASSOCIATED_PROGRAM_ID, associatedAddress, TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
-import { createAccount, sleep } from './utils';
+import { createAccount, generateRandomObjectId, sleep } from './utils';
 import * as dotenv from 'dotenv';
 import { expect } from 'chai';
 import BN from 'bn.js';
+import { prepareParams } from '../src/verify';
 
 dotenv.config();
 
 const TOKEN_METADATA_PROGRAM_ID = new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID.toString());
 
 type ConfigArgs = IdlTypes<DcarbonContract>['configArgs'];
+type RegisterDeviceArgs = IdlTypes<DcarbonContract>['registerDeviceArgs'];
 type CreateFtArgs = IdlTypes<DcarbonContract>['createFtArgs'];
+type MintSftArgs = IdlTypes<DcarbonContract>['mintSftArgs'];
+type VerifyMessageArgs = IdlTypes<DcarbonContract>['verifyMessageArgs'];
 
 describe('dcarbon-contract', () => {
   // Configure the client to use the local cluster.
@@ -81,7 +87,8 @@ describe('dcarbon-contract', () => {
     });
 
     xit('Add admin', async () => {
-      const adminAddress = Keypair.generate().publicKey;
+      // const adminAddress = Keypair.generate().publicKey;
+      const adminAddress = upgradableAuthority.publicKey;
 
       const [adminPda] = PublicKey.findProgramAddressSync(
         [Buffer.from('admin'), adminAddress.toBuffer()],
@@ -329,64 +336,183 @@ describe('dcarbon-contract', () => {
     });
   });
 
-  // xit("Register device", async () => {
-  //     const [authority] = PublicKey.findProgramAddressSync([Buffer.from('authority')], program.programId)
-  //     const creator: CreatorArgs = {
-  //         address: publicKey(authority.toString()),
-  //         verified: true,
-  //         share: 100
-  //     }
-  //
-  //     const createArgsVec: CreateArgsArgs = {
-  //         __kind: "V1",
-  //         name: 'DCarbon Project Test',
-  //         symbol: "DCPT",
-  //         uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
-  //         sellerFeeBasisPoints: percentAmount(5.5),
-  //         decimals: some(0),
-  //         creators: [creator],
-  //         tokenStandard: TokenStandard.FungibleAsset
-  //     }
-  //
-  //     const mint = Keypair.generate()
-  //
-  //     const device: Project = {
-  //         id: generateRandomObjectId(),
-  //         mint: mint.publicKey,
-  //         config: {}
-  //     }
-  //
-  //     const serialize = getCreateArgsSerializer()
-  //     const data = serialize.serialize(createArgsVec)
-  //
-  //     const [metadata] = PublicKey.findProgramAddressSync(
-  //         [
-  //             Buffer.from('metadata'),
-  //             TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-  //             mint.publicKey.toBuffer(),
-  //         ],
-  //         TOKEN_METADATA_PROGRAM_ID
-  //     );
-  //
-  //     // Add your test here.
-  //     const tx = await program.methods.registerProject(device, Buffer.from(data))
-  //         .accounts({
-  //             creator: anchorProvider.wallet.publicKey,
-  //             mint: mint.publicKey,
-  //             metadata: metadata,
-  //             tokenProgram: TOKEN_PROGRAM_ID,
-  //             sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
-  //             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-  //         })
-  //         .signers([mint])
-  //         .rpc({
-  //             skipPreflight: true
-  //         })
-  //
-  //     console.log('Register device: ', tx)
-  // });
+  describe('Device', () => {
+    xit('Register device', async () => {
+      const projectId = generateRandomObjectId();
+      const deviceId = generateRandomObjectId();
 
-  it('Create mint', async () => {
+      const registerDeviceArgs: RegisterDeviceArgs = {
+        projectId,
+        deviceId,
+        deviceType: 1000,
+        destination: Keypair.generate().publicKey,
+        minter: Keypair.generate().publicKey,
+      };
+
+      const mint = Keypair.generate();
+
+      const createArgsVec: CreateArgsArgs = {
+        __kind: 'V1',
+        name: 'DCarbon Project Test',
+        symbol: 'DCPT',
+        uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
+        sellerFeeBasisPoints: percentAmount(5.5),
+        decimals: some(0),
+        creators: null,
+        tokenStandard: TokenStandard.FungibleAsset,
+      };
+
+      const serialize = getCreateArgsSerializer();
+      const data = Buffer.from(serialize.serialize(createArgsVec));
+
+      const [metadata] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const tx = await program.methods
+        .registerDevice(registerDeviceArgs, data)
+        .accounts({
+          signer: upgradableAuthority.publicKey,
+          mint: mint.publicKey,
+          metadata,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
+          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+        })
+        .signers([mint])
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Register device: ', tx);
+    });
+
+    xit('Set active', async () => {
+      const projectId = generateRandomObjectId();
+      const deviceId = generateRandomObjectId();
+
+      const registerDeviceArgs: RegisterDeviceArgs = {
+        projectId,
+        deviceId,
+        deviceType: 1000,
+        destination: Keypair.generate().publicKey,
+        minter: Keypair.generate().publicKey,
+      };
+
+      const mint = Keypair.generate();
+
+      const createArgsVec: CreateArgsArgs = {
+        __kind: 'V1',
+        name: 'DCarbon Project Test',
+        symbol: 'DCPT',
+        uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
+        sellerFeeBasisPoints: percentAmount(5.5),
+        decimals: some(0),
+        creators: null,
+        tokenStandard: TokenStandard.FungibleAsset,
+      };
+
+      const serialize = getCreateArgsSerializer();
+      const data = Buffer.from(serialize.serialize(createArgsVec));
+
+      const [metadata] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const tx = await program.methods
+        .registerDevice(registerDeviceArgs, data)
+        .accounts({
+          signer: upgradableAuthority.publicKey,
+          mint: mint.publicKey,
+          metadata,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
+          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+        })
+        .signers([mint])
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Register device: ', tx);
+
+      const tx2 = await program.methods
+        .setActive(projectId, deviceId)
+        .accounts({
+          signer: upgradableAuthority.publicKey,
+        })
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Set active', tx2);
+    });
+
+    it('Mint sft', async () => {
+      const { projectId, deviceId, destination, mint, metadata } = await setupDevice();
+
+      const mintArgs: MintArgsArgs = {
+        __kind: 'V1',
+        amount: 5,
+        authorizationData: null,
+      };
+
+      const toAta = associatedAddress({
+        mint: mint.publicKey,
+        owner: destination,
+      });
+
+      const serialize = getMintArgsSerializer();
+      const data = serialize.serialize(mintArgs);
+
+      const mintSftArgs: MintSftArgs = {
+        projectId: projectId,
+        deviceId: deviceId,
+        mintDataVec: Buffer.from(data),
+      };
+
+      const { ethAddress, message, signature, recoveryId } = prepareParams();
+
+      function bufferToNumbers(buffer: Buffer): number[] {
+        const numbers: number[] = [];
+        for (let i = 0; i < buffer.length; i++) {
+          numbers.push(buffer[i]);
+        }
+        return numbers;
+      }
+
+      console.log(message.length, signature.length, ethAddress.length);
+
+      const verifyMessageArgs: VerifyMessageArgs = {
+        hash: bufferToNumbers(message),
+        recoveryId: recoveryId,
+        signature: bufferToNumbers(Buffer.from(signature)),
+        expected: bufferToNumbers(ethAddress),
+      };
+
+      const tx = await program.methods
+        .mintSft(mintSftArgs, verifyMessageArgs)
+        .accounts({
+          signer: anchorProvider.wallet.publicKey,
+          destination: destination,
+          toAta,
+          mint: mint.publicKey,
+          metadata: metadata,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
+          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+          ataProgram: ASSOCIATED_PROGRAM_ID,
+        })
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Mint SFT: ', tx);
+    });
+  });
+  xit('Create mint', async () => {
     const createArgsVec: CreateArgsArgs = {
       __kind: 'V1',
       name: 'DCarbon Token',
@@ -809,70 +935,75 @@ describe('dcarbon-contract', () => {
     console.log('Address lookup: ', lookupTableAddress);
   });
 
-  // const registerProject = async (metadataObj?: any) => {
-  //     const [authority] = PublicKey.findProgramAddressSync([Buffer.from('authority')], program.programId)
-  //     const creator: CreatorArgs = {
-  //         address: publicKey(authority.toString()),
-  //         verified: true,
-  //         share: 100
-  //     }
-  //
-  //     const createArgsVec: CreateArgsArgs = {
-  //         __kind: "V1",
-  //         name: metadataObj ? metadataObj.name : 'Project 1',
-  //         symbol: metadataObj ? metadataObj.symbol : "P1T",
-  //         uri: metadataObj ? metadataObj.uri : 'https://dev-bucket.kyupad.xyz/public/metadata/spl-token/metadata_project_1.json',
-  //         sellerFeeBasisPoints: percentAmount(5.5),
-  //         decimals: some(0),
-  //         creators: [creator],
-  //         tokenStandard: TokenStandard.FungibleAsset,
-  //         collection: null
-  //     }
-  //
-  //     const mint = Keypair.generate()
-  //
-  //     const projectId = generateRandomObjectId()
-  //
-  //     const device: Project = {
-  //         id: projectId,
-  //         mint: mint.publicKey,
-  //         config: {}
-  //     }
-  //
-  //     const serialize = getCreateArgsSerializer()
-  //     const data = serialize.serialize(createArgsVec)
-  //
-  //
-  //     const [metadata] = PublicKey.findProgramAddressSync(
-  //         [
-  //             Buffer.from('metadata'),
-  //             TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-  //             mint.publicKey.toBuffer(),
-  //         ],
-  //         TOKEN_METADATA_PROGRAM_ID
-  //     );
-  //
-  //     // Add your test here.
-  //     const tx = await program.methods.registerProject(device, Buffer.from(data))
-  //         .accounts({
-  //             creator: anchorProvider.wallet.publicKey,
-  //             mint: mint.publicKey,
-  //             metadata: metadata,
-  //             tokenProgram: TOKEN_PROGRAM_ID,
-  //             sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
-  //             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-  //         })
-  //         .signers([mint])
-  //         .rpc({
-  //             skipPreflight: true
-  //         })
-  //
-  //     console.log('Register device: ', tx)
-  //
-  //     return {
-  //         device,
-  //         mint,
-  //         metadata,
-  //     }
-  // }
+  const setupDevice = async () => {
+    const projectId = generateRandomObjectId();
+    const deviceId = generateRandomObjectId();
+
+    const destination = Keypair.generate().publicKey;
+
+    const registerDeviceArgs: RegisterDeviceArgs = {
+      projectId,
+      deviceId,
+      deviceType: 1000,
+      destination: destination,
+      minter: upgradableAuthority.publicKey,
+    };
+
+    const mint = Keypair.generate();
+
+    const createArgsVec: CreateArgsArgs = {
+      __kind: 'V1',
+      name: 'DCarbon Project Test',
+      symbol: 'DCPT',
+      uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
+      sellerFeeBasisPoints: percentAmount(5.5),
+      decimals: some(0),
+      creators: null,
+      tokenStandard: TokenStandard.FungibleAsset,
+    };
+
+    const serialize = getCreateArgsSerializer();
+    const data = Buffer.from(serialize.serialize(createArgsVec));
+
+    const [metadata] = PublicKey.findProgramAddressSync(
+      [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
+      TOKEN_METADATA_PROGRAM_ID,
+    );
+
+    const tx = await program.methods
+      .registerDevice(registerDeviceArgs, data)
+      .accounts({
+        signer: upgradableAuthority.publicKey,
+        mint: mint.publicKey,
+        metadata,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
+        tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+      })
+      .signers([mint])
+      .rpc({
+        skipPreflight: true,
+      });
+
+    console.log('Register device: ', tx);
+
+    const tx2 = await program.methods
+      .setActive(projectId, deviceId)
+      .accounts({
+        signer: upgradableAuthority.publicKey,
+      })
+      .rpc({
+        skipPreflight: true,
+      });
+
+    console.log('Set active', tx2);
+
+    return {
+      projectId,
+      deviceId,
+      destination,
+      mint,
+      metadata,
+    };
+  };
 });
