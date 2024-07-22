@@ -99,8 +99,8 @@ pub fn create_ft<'c: 'info, 'info>(
             )?,
             &[
                 mint.to_account_info(),
-                token_program.clone(),
-                authority.clone()
+                token_program.to_account_info(),
+                authority.to_account_info()
             ],
             &[seeds_signer],
         )?;
@@ -119,8 +119,8 @@ pub fn create_ft<'c: 'info, 'info>(
             )?,
             &[
                 mint.to_account_info(),
-                token_program.clone(),
-                authority.clone()
+                token_program.to_account_info(),
+                authority.to_account_info()
             ],
             &[seeds_signer],
         )?;

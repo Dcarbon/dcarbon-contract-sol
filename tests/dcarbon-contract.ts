@@ -345,7 +345,7 @@ describe('dcarbon-contract', () => {
         projectId,
         deviceId,
         deviceType: 1000,
-        destination: Keypair.generate().publicKey,
+        owner: Keypair.generate().publicKey,
         minter: Keypair.generate().publicKey,
       };
 
@@ -372,7 +372,7 @@ describe('dcarbon-contract', () => {
         projectId,
         deviceId,
         deviceType: 1000,
-        destination: Keypair.generate().publicKey,
+        owner: Keypair.generate().publicKey,
         minter: Keypair.generate().publicKey,
       };
 
@@ -400,7 +400,7 @@ describe('dcarbon-contract', () => {
     });
 
     it('Mint sft', async () => {
-      const { projectId, deviceId, destination, mint, metadata } = await setupDevice();
+      const { projectId, deviceId, owner, mint, metadata } = await setupDevice();
 
       const mintArgs: MintArgsArgs = {
         __kind: 'V1',
@@ -410,7 +410,7 @@ describe('dcarbon-contract', () => {
 
       const toAta = associatedAddress({
         mint: mint.publicKey,
-        owner: destination,
+        owner: owner,
       });
 
       const serialize = getMintArgsSerializer();
@@ -419,6 +419,7 @@ describe('dcarbon-contract', () => {
       const mintSftArgs: MintSftArgs = {
         projectId: projectId,
         deviceId: deviceId,
+        createMintDataVec: Buffer.from([1]),
         mintDataVec: Buffer.from(data),
       };
 
@@ -437,8 +438,8 @@ describe('dcarbon-contract', () => {
         .mintSft(mintSftArgs, verifyMessageArgs)
         .accounts({
           signer: anchorProvider.wallet.publicKey,
-          destination: destination,
-          toAta,
+          deviceOwner: owner,
+          ownerAta: toAta,
           mint: mint.publicKey,
           metadata: metadata,
           tokenProgram: TOKEN_PROGRAM_ID,
@@ -881,13 +882,13 @@ describe('dcarbon-contract', () => {
     const projectId = generateRandomObjectId();
     const deviceId = generateRandomObjectId();
 
-    const destination = Keypair.generate().publicKey;
+    const owner = Keypair.generate().publicKey;
 
     const registerDeviceArgs: RegisterDeviceArgs = {
       projectId,
       deviceId,
       deviceType: 1000,
-      destination: destination,
+      owner: owner,
       minter: upgradableAuthority.publicKey,
     };
 
@@ -924,7 +925,7 @@ describe('dcarbon-contract', () => {
     return {
       projectId,
       deviceId,
-      destination,
+      owner,
       mint,
       metadata,
     };

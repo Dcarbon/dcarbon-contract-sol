@@ -56,7 +56,7 @@ pub struct RegisterDeviceArgs {
     #[max_len(24)]
     pub device_id: String,
     pub device_type: u16,
-    pub destination: Pubkey,
+    pub owner: Pubkey,
     pub minter: Pubkey
 }
 

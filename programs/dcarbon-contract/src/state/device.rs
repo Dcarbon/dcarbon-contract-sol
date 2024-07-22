@@ -17,7 +17,7 @@ pub struct Device {
     pub device_type: u16,
     #[max_len(24)]
     pub project_id: String,
-    pub destination: Pubkey,
+    pub owner: Pubkey,
     pub minter: Pubkey,
 }
 
@@ -41,7 +41,7 @@ impl Device {
         self.id = register_device_args.device_id;
         self.device_type = register_device_args.device_type;
         self.project_id = register_device_args.project_id;
-        self.destination = register_device_args.destination;
+        self.owner = register_device_args.owner;
         self.minter = register_device_args.minter;
 
         Ok(())
