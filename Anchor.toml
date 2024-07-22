@@ -5,13 +5,13 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-dcarbon_contract = "bM6u1BRUQiFD1xEDPpqqGMMoLExtnmiPeb8NtXPDtg3"
+dcarbon_contract = "75eELePzbpEwD1tAEvYna5ZJtC26GeU42uF3ycyyTCt2"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "https://kathlin-5yytwf-fast-devnet.helius-rpc.com"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
