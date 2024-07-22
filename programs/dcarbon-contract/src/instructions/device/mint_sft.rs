@@ -1,12 +1,10 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::secp256k1_recover::secp256k1_recover;
 use mpl_token_metadata::instructions::MintCpiBuilder;
 use mpl_token_metadata::types::MintArgs;
 
 use crate::*;
 use crate::error::DCarbonError;
 use crate::state::{Device, DeviceStatus};
-use crate::utils::assert_keys_equal;
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct MintSftArgs {
@@ -23,34 +21,22 @@ pub struct VerifyMessageArgs {
     expected: Vec<u8>,
 }
 
-pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_message_args: VerifyMessageArgs) -> Result<()> {
+pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_message_args: VerifyMessageArgs) -> Result<()> {
     let mint = &ctx.accounts.mint;
     let signer = &ctx.accounts.signer;
-    let device = &ctx.accounts.device;
     let token_program = &ctx.accounts.token_program;
     let system_program = &ctx.accounts.system_program;
     let metadata = &ctx.accounts.metadata;
     let authority = &ctx.accounts.authority;
     let device_status = &ctx.accounts.device_status;
 
-    // check mint key with device mint
-    assert_keys_equal(&device.mint, &mint.key())?;
+    // // check mint key with device mint
+    // assert_keys_equal(&device.mint, &mint.key())?;
 
     // check is active
     if !device_status.is_active {
         return Err(DCarbonError::DeviceIsNotActive.into());
     }
-
-    // // verify message
-    // let offsets = SecpSignatureOffsets {
-    //     signature_offset: signature_offset as u16,
-    //     signature_instruction_index: 0,
-    //     eth_address_offset: eth_address_offset as u16,
-    //     eth_address_instruction_index: 0,
-    //     message_data_offset: message_data_offset as u16,
-    //     message_data_size: message_arr.len() as u16,
-    //     message_instruction_index: 0,
-    // };
 
     let seeds: &[&[u8]] = &[b"authority"];
 
