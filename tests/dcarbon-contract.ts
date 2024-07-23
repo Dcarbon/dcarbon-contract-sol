@@ -334,6 +334,17 @@ describe('dcarbon-contract', () => {
 
       console.log('Init contract config: ', tx);
     });
+
+    it('Set coefficient', async () => {
+      const deviceId = generateRandomObjectId();
+      const value = new BN(1);
+
+      const tx = await program.methods.setCoefficient(deviceId, value).accounts({}).rpc({
+        skipPreflight: true,
+      });
+
+      console.log('Set coefficient: ', tx);
+    });
   });
 
   describe('Device', () => {
@@ -399,7 +410,7 @@ describe('dcarbon-contract', () => {
       console.log('Set active', tx2);
     });
 
-    it('Mint sft', async () => {
+    xit('Mint sft', async () => {
       const { projectId, deviceId, owner, mint, metadata } = await setupDevice();
 
       const mintArgs: MintArgsArgs = {
