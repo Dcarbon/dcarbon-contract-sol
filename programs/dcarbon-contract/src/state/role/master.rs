@@ -25,7 +25,6 @@ impl Master {
         Master::try_serialize(self, &mut writer)
     }
 
-
     pub fn init<'info>(
         master_pda: &'info AccountInfo<'info>,
         payer: AccountInfo<'info>,
@@ -50,7 +49,7 @@ impl Master {
 
             // Create account if it doesn't exist
             create_account(
-                CpiContext::new(system_program, CreateAccount { from: payer, to: master_pda.clone() })
+                CpiContext::new(system_program.to_account_info(), CreateAccount { from: payer.to_account_info(), to: master_pda.to_account_info() })
                     .with_signer(&[seeds_signer]),
                 Rent::get()?.minimum_balance(space.try_into().unwrap()),
                 space,

@@ -15,10 +15,9 @@ pub struct Device {
     #[max_len(24)]
     pub id: String,
     pub device_type: u16,
-    pub mint: Pubkey,
     #[max_len(24)]
     pub project_id: String,
-    pub destination: Pubkey,
+    pub owner: Pubkey,
     pub minter: Pubkey,
 }
 
@@ -35,15 +34,14 @@ impl Device {
         }
     }
 
-    pub fn assign_value(&mut self, register_device_args: RegisterDeviceArgs, mint: Pubkey) -> Result<()> {
+    pub fn assign_value(&mut self, register_device_args: RegisterDeviceArgs) -> Result<()> {
         // validate
         self.validate(register_device_args.clone())?;
 
         self.id = register_device_args.device_id;
         self.device_type = register_device_args.device_type;
         self.project_id = register_device_args.project_id;
-        self.mint = mint.key();
-        self.destination = register_device_args.destination;
+        self.owner = register_device_args.owner;
         self.minter = register_device_args.minter;
 
         Ok(())

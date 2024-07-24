@@ -60,8 +60,16 @@ pub mod dcarbon_contract {
         instructions::set_minting_limit(ctx, device_type, limit)
     }
 
-    pub fn register_device(ctx: Context<RegisterDevice>, register_device_args: RegisterDeviceArgs, metadata_vec: Vec<u8>) -> Result<()> {
-        instructions::register_device(ctx, register_device_args, metadata_vec)
+    pub fn set_rate(ctx: Context<SetConfig>, rate: u64) -> Result<()> {
+        instructions::set_rate(ctx, rate)
+    }
+
+    pub fn set_coefficient(ctx: Context<SetCoefficient>, device_id: String, value: u64) -> Result<()> {
+        instructions::set_coefficient(ctx, device_id, value)
+    }
+
+    pub fn register_device(ctx: Context<RegisterDevice>, register_device_args: RegisterDeviceArgs) -> Result<()> {
+        instructions::register_device(ctx, register_device_args)
     }
 
     pub fn set_active(ctx: Context<SetActive>, project_id: String, device_id: String) -> Result<()> {
