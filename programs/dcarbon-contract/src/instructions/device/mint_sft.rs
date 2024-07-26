@@ -5,7 +5,7 @@ use mpl_token_metadata::types::{CreateArgs, MintArgs};
 
 use crate::*;
 use crate::error::DCarbonError;
-use crate::state::{ContractConfig, Device, DeviceStatus};
+use crate::state::{Claim, ContractConfig, Device, DeviceStatus};
 use crate::utils::assert_keys_equal;
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
@@ -33,9 +33,7 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_messa
     let authority = &ctx.accounts.authority;
     let device_status = &ctx.accounts.device_status;
     let contract_config = &ctx.accounts.contract_config;
-    let destination_ata = &ctx.accounts.destination_ata;
     let token_metadata_program = &ctx.accounts.token_metadata_program;
-    let destination = &ctx.accounts.destination;
 
     // check is active
     if !device_status.is_active {
@@ -91,46 +89,12 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_messa
     // increase something
     match &mint_data {
         MintArgs::V1 { amount, .. } => {
-            let total_amount = amount / (1u64 - contract_config.minting_fee * 1e9 as u64);
+            // let total_amount = amount / ((10u64 - contract_config.minting_fee) / 10);
 
-            let minting_fee = total_amount - amount;
-
-            let mint_destination_args = MintArgs::V1 {
-                amount: minting_fee,
-                authorization_data: None,
-            };
-
-            let seeds: &[&[u8]] = &[b"destiantion"];
-
-            let (address, _) = Pubkey::find_program_address(&seeds, &ID);
-
-            // check destination
-            assert_keys_equal(destination.key, &address)?;
-
-            let destination_ata_checked = &get_associated_token_address(&address, mint.key);
-
-            // check destination ata
-            assert_keys_equal(destination_ata_checked, destination_ata.key)?;
-
-            MintCpiBuilder::new(token_metadata_program)
-                .token(&destination_ata)
-                .token_owner(Some(&destination))
-                .metadata(metadata)
-                .master_edition(None)
-                .token_record(None)
-                .mint(&mint.to_account_info())
-                .authority(authority)
-                .delegate_record(None)
-                .payer(&signer.to_account_info())
-                .system_program(&system_program.to_account_info())
-                .sysvar_instructions(&ctx.accounts.sysvar_program)
-                .spl_token_program(token_program)
-                .spl_ata_program(&ctx.accounts.ata_program)
-                .authorization_rules(None)
-                .authorization_rules_program(None)
-                .mint_args(mint_destination_args.clone())
-                .invoke_signed(&[seeds_signer])?;
-        },
+            let claim = &mut ctx.accounts.claim;
+            claim.mint = mint.key();
+            claim.amount = 1;
+        }
     };
 
     Ok(())
@@ -158,16 +122,18 @@ pub struct MintSft<'info> {
     )]
     pub contract_config: Account<'info, ContractConfig>,
 
+    #[account(
+        init,
+        payer = signer,
+        space = 8 + Claim::INIT_SPACE,
+        seeds = [Claim::PREFIX_SEED, mint.key().as_ref()],
+        bump
+    )]
+    pub claim: Account<'info, Claim>,
+
     #[account(mut)]
     /// CHECK:
     pub owner_ata: AccountInfo<'info>,
-
-    /// CHECK:
-    pub destination: AccountInfo<'info>,
-
-    #[account(mut)]
-    /// CHECK:
-    pub destination_ata: AccountInfo<'info>,
 
     #[account(
         seeds = [Device::PREFIX_SEED, mint_sft_args.project_id.as_bytes(), mint_sft_args.device_id.as_bytes()],
@@ -196,6 +162,7 @@ pub struct MintSft<'info> {
     pub mint: Signer<'info>,
 
     /// CHECK:
+    #[account(mut)]
     pub metadata: AccountInfo<'info>,
 
     /// CHECK:

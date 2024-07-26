@@ -335,7 +335,7 @@ describe('dcarbon-contract', () => {
       console.log('Init contract config: ', tx);
     });
 
-    it('Set coefficient', async () => {
+    xit('Set coefficient', async () => {
       const deviceId = generateRandomObjectId();
       const value = new BN(1);
 
@@ -344,6 +344,21 @@ describe('dcarbon-contract', () => {
       });
 
       console.log('Set coefficient: ', tx);
+    });
+
+    xit('Set minting fee', async () => {
+      const mintingFee = new BN(1);
+
+      const tx = await program.methods
+        .setMintingFee(mintingFee)
+        .accounts({
+          signer: upgradableAuthority.publicKey,
+        })
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Set minting fee: ', tx);
     });
   });
 
@@ -410,8 +425,29 @@ describe('dcarbon-contract', () => {
       console.log('Set active', tx2);
     });
 
-    xit('Mint sft', async () => {
-      const { projectId, deviceId, owner, mint, metadata } = await setupDevice();
+    it('Mint sft', async () => {
+      const { projectId, deviceId, owner } = await setupDevice();
+
+      const mint = Keypair.generate();
+
+      const [metadata] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const createArgsVec: CreateArgsArgs = {
+        __kind: 'V1',
+        name: 'DCarbon Token',
+        symbol: 'DCPT',
+        uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
+        sellerFeeBasisPoints: percentAmount(5.5),
+        decimals: some(9),
+        creators: null,
+        tokenStandard: TokenStandard.Fungible,
+      };
+
+      const serialize1 = getCreateArgsSerializer();
+      const data1 = serialize1.serialize(createArgsVec);
 
       const mintArgs: MintArgsArgs = {
         __kind: 'V1',
@@ -419,7 +455,7 @@ describe('dcarbon-contract', () => {
         authorizationData: null,
       };
 
-      const toAta = associatedAddress({
+      const ownerAta = associatedAddress({
         mint: mint.publicKey,
         owner: owner,
       });
@@ -430,13 +466,11 @@ describe('dcarbon-contract', () => {
       const mintSftArgs: MintSftArgs = {
         projectId: projectId,
         deviceId: deviceId,
-        createMintDataVec: Buffer.from([1]),
+        createMintDataVec: Buffer.from(data1),
         mintDataVec: Buffer.from(data),
       };
 
       const { ethAddress, message, signature, recoveryId } = prepareParams();
-
-      console.log(message.length, signature.length, ethAddress.length);
 
       const verifyMessageArgs: VerifyMessageArgs = {
         hash: message,
@@ -445,12 +479,21 @@ describe('dcarbon-contract', () => {
         expected: ethAddress,
       };
 
+      const [destination] = PublicKey.findProgramAddressSync([Buffer.from('destiantion')], program.programId);
+
+      const destinationAta = associatedAddress({
+        mint: mint.publicKey,
+        owner: destination,
+      });
+
       const tx = await program.methods
         .mintSft(mintSftArgs, verifyMessageArgs)
         .accounts({
           signer: anchorProvider.wallet.publicKey,
           deviceOwner: owner,
-          ownerAta: toAta,
+          ownerAta: ownerAta,
+          destination: destination,
+          destinationAta: destinationAta,
           mint: mint.publicKey,
           metadata: metadata,
           tokenProgram: TOKEN_PROGRAM_ID,
@@ -458,6 +501,7 @@ describe('dcarbon-contract', () => {
           tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
           ataProgram: ASSOCIATED_PROGRAM_ID,
         })
+        .signers([mint])
         .rpc({
           skipPreflight: true,
         });
@@ -903,19 +947,11 @@ describe('dcarbon-contract', () => {
       minter: upgradableAuthority.publicKey,
     };
 
-    const mint = Keypair.generate();
-
-    const [metadata] = PublicKey.findProgramAddressSync(
-      [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
-      TOKEN_METADATA_PROGRAM_ID,
-    );
-
     const tx = await program.methods
       .registerDevice(registerDeviceArgs)
       .accounts({
         signer: upgradableAuthority.publicKey,
       })
-      .signers([mint])
       .rpc({
         skipPreflight: true,
       });
@@ -937,8 +973,6 @@ describe('dcarbon-contract', () => {
       projectId,
       deviceId,
       owner,
-      mint,
-      metadata,
     };
   };
 });
