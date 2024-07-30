@@ -5,7 +5,7 @@ use mpl_token_metadata::types::{CreateArgs, MintArgs};
 
 use crate::*;
 use crate::error::DCarbonError;
-use crate::state::{Claim, ContractConfig, Device, DeviceStatus};
+use crate::state::{Claim, ContractConfig, Device, DeviceStatus, Governance};
 use crate::utils::assert_keys_equal;
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
@@ -35,6 +35,8 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_messa
     let device_status = &ctx.accounts.device_status;
     let contract_config = &ctx.accounts.contract_config;
     let token_metadata_program = &ctx.accounts.token_metadata_program;
+    let governance = &mut ctx.accounts.governance;
+    let owner_governance = &mut ctx.accounts.owner_governance;
 
     // check is active
     if !device_status.is_active {
@@ -96,12 +98,15 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_messa
             claim.mint = mint.key();
             // hard code
             claim.amount = 1;
+
+            // increase dCarbon
+            if governance.amount > 0 && governance.amount >= *amount {
+                governance.amount -= amount;
+                owner_governance.amount += amount;
+            }
         }
     };
 
-    // increase dCarbon
-
-    //
 
     // check nonce, check valid
 
@@ -124,6 +129,22 @@ pub struct MintSft<'info> {
     pub device_owner: AccountInfo<'info>,
 
     #[account(
+        init_if_needed,
+        space = 8 + Governance::INIT_SPACE,
+        payer = signer,
+        seeds = [Governance::PREFIX_SEED, device_owner.key().as_ref()],
+        bump
+    )]
+    pub owner_governance: Account<'info, Governance>,
+
+    #[account(
+        seeds = [Governance::PREFIX_SEED],
+        bump,
+        owner = ID
+    )]
+    pub governance: Account<'info, Governance>,
+
+    #[account(
         mut,
         seeds = [ContractConfig::PREFIX_SEED],
         bump
@@ -144,14 +165,14 @@ pub struct MintSft<'info> {
     pub owner_ata: AccountInfo<'info>,
 
     #[account(
-        seeds = [Device::PREFIX_SEED, &mint_sft_args.project_id.to_le_bytes(), &mint_sft_args.device_id.to_le_bytes()],
+        seeds = [Device::PREFIX_SEED, & mint_sft_args.project_id.to_le_bytes(), & mint_sft_args.device_id.to_le_bytes()],
         bump,
         owner = ID,
     )]
     pub device: Account<'info, Device>,
 
     #[account(
-        seeds = [DeviceStatus::PREFIX_SEED, &mint_sft_args.device_id.to_le_bytes()],
+        seeds = [DeviceStatus::PREFIX_SEED, & mint_sft_args.device_id.to_le_bytes()],
         bump,
         owner = ID,
     )]

@@ -15,6 +15,7 @@ pub struct ContractConfig {
     pub mint: Pubkey,
     #[max_len(100)]
     pub minting_limits: Vec<DeviceLimit>,
+    pub governance_amount: u64,
 }
 
 impl ContractConfig {
@@ -67,6 +68,7 @@ impl ContractConfig {
         contract_config_der.minting_fee = config_args.minting_fee;
         contract_config_der.minting_limits = Vec::new();
         contract_config_der.mint = mint;
+        contract_config_der.governance_amount = config_args.governance_amount;
 
         // serialize
         contract_config_der.serialize(contract_config_der.to_account_info())
