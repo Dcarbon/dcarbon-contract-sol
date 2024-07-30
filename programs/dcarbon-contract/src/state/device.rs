@@ -12,11 +12,9 @@ pub struct DeviceLimit {
 #[account]
 #[derive(InitSpace, Debug)]
 pub struct Device {
-    #[max_len(24)]
-    pub id: String,
+    pub id: u16,
     pub device_type: u16,
-    #[max_len(24)]
-    pub project_id: String,
+    pub project_id: u16,
     pub owner: Pubkey,
     pub minter: Pubkey,
 }
@@ -27,7 +25,7 @@ impl Device {
     // check device id length
     fn validate(&self, register_device_args: RegisterDeviceArgs) -> Result<()> {
         // check project_id
-        if register_device_args.project_id.len() == 24 {
+        if register_device_args.project_id > 0 {
             Ok(())
         } else {
             Err(DCarbonError::InvalidProjectIdLength.into())

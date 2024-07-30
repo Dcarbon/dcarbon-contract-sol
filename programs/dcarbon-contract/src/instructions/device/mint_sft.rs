@@ -10,8 +10,9 @@ use crate::utils::assert_keys_equal;
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct MintSftArgs {
-    project_id: String,
-    device_id: String,
+    project_id: u16,
+    device_id: u16,
+    // total amount
     create_mint_data_vec: Vec<u8>,
     mint_data_vec: Vec<u8>,
 }
@@ -86,16 +87,23 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_messa
         .mint_args(mint_data.clone())
         .invoke_signed(&[seeds_signer])?;
 
-    // increase something
+    // increase fee amount
     match &mint_data {
         MintArgs::V1 { amount, .. } => {
             // let total_amount = amount / ((10u64 - contract_config.minting_fee) / 10);
 
             let claim = &mut ctx.accounts.claim;
             claim.mint = mint.key();
+            // hard code
             claim.amount = 1;
         }
     };
+
+    // increase dCarbon
+
+    //
+
+    // check nonce, check valid
 
     Ok(())
 }
@@ -136,14 +144,14 @@ pub struct MintSft<'info> {
     pub owner_ata: AccountInfo<'info>,
 
     #[account(
-        seeds = [Device::PREFIX_SEED, mint_sft_args.project_id.as_bytes(), mint_sft_args.device_id.as_bytes()],
+        seeds = [Device::PREFIX_SEED, &mint_sft_args.project_id.to_le_bytes(), &mint_sft_args.device_id.to_le_bytes()],
         bump,
         owner = ID,
     )]
     pub device: Account<'info, Device>,
 
     #[account(
-        seeds = [DeviceStatus::PREFIX_SEED, device.key().as_ref()],
+        seeds = [DeviceStatus::PREFIX_SEED, &mint_sft_args.device_id.to_le_bytes()],
         bump,
         owner = ID,
     )]

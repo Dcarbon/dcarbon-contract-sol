@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::state::{Admin, Device, DeviceStatus};
 use crate::ID;
 
-pub fn set_active(ctx: Context<SetActive>, _project_id: String, _device_id: String) -> Result<()> {
+pub fn set_active(ctx: Context<SetActive>, _project_id: u16, _device_id: u16) -> Result<()> {
     let device_status = &mut ctx.accounts.device_status;
 
     let is_active = device_status.is_active;
@@ -14,7 +14,7 @@ pub fn set_active(ctx: Context<SetActive>, _project_id: String, _device_id: Stri
 }
 
 #[derive(Accounts)]
-#[instruction(_project_id: String, _device_id: String)]
+#[instruction(_project_id: u16, _device_id: u16)]
 pub struct SetActive<'info> {
     #[account(
         mut,
@@ -30,7 +30,7 @@ pub struct SetActive<'info> {
     pub admin_pda: Account<'info, Admin>,
 
     #[account(
-        seeds = [Device::PREFIX_SEED, _project_id.as_bytes(), _device_id.as_bytes()],
+        seeds = [Device::PREFIX_SEED, &_project_id.to_le_bytes(), &_device_id.to_le_bytes()],
         bump,
         owner = ID,
     )]
@@ -38,7 +38,7 @@ pub struct SetActive<'info> {
 
     #[account(
         mut,
-        seeds = [DeviceStatus::PREFIX_SEED, device.key().as_ref()],
+        seeds = [DeviceStatus::PREFIX_SEED, &_device_id.to_le_bytes()],
         bump,
         owner = ID,
     )]

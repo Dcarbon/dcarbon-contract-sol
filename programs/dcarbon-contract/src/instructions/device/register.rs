@@ -32,16 +32,16 @@ pub struct RegisterDevice<'info> {
         init,
         payer = signer,
         space = 8 + Device::INIT_SPACE,
-        seeds = [Device::PREFIX_SEED, register_device_args.project_id.as_bytes(), register_device_args.device_id.as_bytes()],
+        seeds = [Device::PREFIX_SEED, &register_device_args.project_id.to_le_bytes(), &register_device_args.device_id.to_le_bytes()],
         bump
     )]
     pub device: Account<'info, Device>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = signer,
         space = 8 + DeviceStatus::INIT_SPACE,
-        seeds = [DeviceStatus::PREFIX_SEED, device.key().as_ref()],
+        seeds = [DeviceStatus::PREFIX_SEED, &register_device_args.device_id.to_le_bytes()],
         bump
     )]
     pub device_status: Account<'info, DeviceStatus>,
@@ -51,10 +51,8 @@ pub struct RegisterDevice<'info> {
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct RegisterDeviceArgs {
-    #[max_len(24)]
-    pub project_id: String,
-    #[max_len(24)]
-    pub device_id: String,
+    pub project_id: u16,
+    pub device_id: u16,
     pub device_type: u16,
     pub owner: Pubkey,
     pub minter: Pubkey

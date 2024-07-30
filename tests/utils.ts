@@ -1,11 +1,11 @@
-import { ObjectId } from 'mongodb';
 import { Keypair, SystemProgram, Transaction } from '@solana/web3.js';
 import { AnchorProvider } from '@coral-xyz/anchor';
 
-export const generateRandomObjectId = () => {
-  const objectId = new ObjectId();
-  return objectId.toHexString();
-};
+export function getRandomU16() {
+  // The maximum value for u16 is 65535
+  const maxU16 = 65535;
+  return Math.floor(Math.random() * (maxU16 + 1));
+}
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

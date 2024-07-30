@@ -19,7 +19,7 @@ import {
   Transaction,
 } from '@solana/web3.js';
 import { ASSOCIATED_PROGRAM_ID, associatedAddress, TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
-import { createAccount, generateRandomObjectId, sleep } from './utils';
+import { createAccount, getRandomU16, sleep } from './utils';
 import * as dotenv from 'dotenv';
 import { expect } from 'chai';
 import BN from 'bn.js';
@@ -336,10 +336,10 @@ describe('dcarbon-contract', () => {
     });
 
     xit('Set coefficient', async () => {
-      const deviceId = generateRandomObjectId();
+      const key = Keypair.generate().publicKey;
       const value = new BN(1);
 
-      const tx = await program.methods.setCoefficient(deviceId, value).accounts({}).rpc({
+      const tx = await program.methods.setCoefficient(key, value).accounts({}).rpc({
         skipPreflight: true,
       });
 
@@ -364,8 +364,8 @@ describe('dcarbon-contract', () => {
 
   describe('Device', () => {
     xit('Register device', async () => {
-      const projectId = generateRandomObjectId();
-      const deviceId = generateRandomObjectId();
+      const projectId = getRandomU16();
+      const deviceId = getRandomU16();
 
       const registerDeviceArgs: RegisterDeviceArgs = {
         projectId,
@@ -391,8 +391,8 @@ describe('dcarbon-contract', () => {
     });
 
     xit('Set active', async () => {
-      const projectId = generateRandomObjectId();
-      const deviceId = generateRandomObjectId();
+      const projectId = getRandomU16();
+      const deviceId = getRandomU16();
 
       const registerDeviceArgs: RegisterDeviceArgs = {
         projectId,
@@ -451,7 +451,7 @@ describe('dcarbon-contract', () => {
 
       const mintArgs: MintArgsArgs = {
         __kind: 'V1',
-        amount: 5,
+        amount: 5 * 10 ** 9,
         authorizationData: null,
       };
 
@@ -479,12 +479,12 @@ describe('dcarbon-contract', () => {
         expected: ethAddress,
       };
 
-      const [destination] = PublicKey.findProgramAddressSync([Buffer.from('destiantion')], program.programId);
+      // const [destination] = PublicKey.findProgramAddressSync([Buffer.from('destiantion')], program.programId);
 
-      const destinationAta = associatedAddress({
-        mint: mint.publicKey,
-        owner: destination,
-      });
+      // const destinationAta = associatedAddress({
+      //   mint: mint.publicKey,
+      //   owner: destination,
+      // });
 
       const tx = await program.methods
         .mintSft(mintSftArgs, verifyMessageArgs)
@@ -492,8 +492,6 @@ describe('dcarbon-contract', () => {
           signer: anchorProvider.wallet.publicKey,
           deviceOwner: owner,
           ownerAta: ownerAta,
-          destination: destination,
-          destinationAta: destinationAta,
           mint: mint.publicKey,
           metadata: metadata,
           tokenProgram: TOKEN_PROGRAM_ID,
@@ -934,8 +932,8 @@ describe('dcarbon-contract', () => {
   });
 
   const setupDevice = async () => {
-    const projectId = generateRandomObjectId();
-    const deviceId = generateRandomObjectId();
+    const projectId = getRandomU16();
+    const deviceId = getRandomU16();
 
     const owner = Keypair.generate().publicKey;
 
