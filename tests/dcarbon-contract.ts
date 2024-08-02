@@ -431,9 +431,9 @@ describe('dcarbon-contract', () => {
         symbol: 'DCPT',
         uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
         sellerFeeBasisPoints: percentAmount(5.5),
-        decimals: some(9),
+        decimals: some(0),
         creators: null,
-        tokenStandard: TokenStandard.Fungible,
+        tokenStandard: TokenStandard.FungibleAsset,
       };
 
       const serialize1 = getCreateArgsSerializer();
@@ -441,7 +441,7 @@ describe('dcarbon-contract', () => {
 
       const mintArgs: MintArgsArgs = {
         __kind: 'V1',
-        amount: 5 * 10 ** 9,
+        amount: 5,
         authorizationData: null,
       };
 
