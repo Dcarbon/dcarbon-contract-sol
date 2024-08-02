@@ -45,8 +45,8 @@ pub mod dcarbon_contract {
         instructions::create_ft(ctx, create_ft_args)
     }
 
-    pub fn init_config<'c: 'info, 'info>(
-        ctx: Context<'_, '_, 'c, 'info, InitConfig<'info>>,
+    pub fn init_config(
+        ctx: Context<InitConfig>,
         config_args: ConfigArgs,
     ) -> Result<()> {
         instructions::init_config(ctx, config_args)

@@ -4,23 +4,18 @@ use anchor_spl::token::Mint;
 use crate::ID;
 use crate::state::{ContractConfig, Governance, Master};
 
-pub fn init_config<'c: 'info, 'info>(
-    ctx: Context<'_, '_, 'c, 'info, InitConfig<'info>>,
+pub fn init_config(
+    ctx: Context<InitConfig>,
     config_args: ConfigArgs,
 ) -> Result<()> {
-    let signer = &ctx.accounts.signer;
-    let system_program = &ctx.accounts.system_program;
-    let mint = &ctx.accounts.mint;
-    let governance = &mut ctx.accounts.governance;
-
-    let remaining_accounts_iter = &mut ctx.remaining_accounts.iter();
-
-    let contract_config = next_account_info(remaining_accounts_iter).unwrap();
-
-    governance.amount = config_args.governance_amount;
-
-    // add contract config
-    ContractConfig::init(contract_config, signer.to_account_info(), system_program.to_account_info(), config_args, mint.key())
+    // let contract_config = &mut ctx.accounts.contract_config;
+    // let mint = &ctx.accounts.mint;
+    // let governance = &mut ctx.accounts.governance;
+    //
+    // governance.amount = config_args.governance_amount;
+    //
+    // contract_config.assign(config_args, mint.key())
+    Ok(())
 }
 
 #[derive(Accounts)]
@@ -39,7 +34,16 @@ pub struct InitConfig<'info> {
     pub master_pda: Account<'info, Master>,
 
     #[account(
-        init,
+        init_if_needed,
+        space = 8 + ContractConfig::INIT_SPACE,
+        payer = signer,
+        seeds = [ContractConfig::PREFIX_SEED],
+        bump,
+    )]
+    pub contract_config: Account<'info, ContractConfig>,
+
+    #[account(
+        init_if_needed,
         space = 8 + Governance::INIT_SPACE,
         payer = signer,
         seeds = [Governance::PREFIX_SEED],

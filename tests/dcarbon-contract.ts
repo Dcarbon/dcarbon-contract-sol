@@ -24,6 +24,7 @@ import * as dotenv from 'dotenv';
 import { expect } from 'chai';
 import BN from 'bn.js';
 import { prepareParams } from '../src/verify';
+import { ethers } from 'ethers';
 
 dotenv.config();
 
@@ -311,9 +312,8 @@ describe('dcarbon-contract', () => {
       const configArgs: ConfigArgs = {
         mintingFee: new BN(11),
         rate: new BN(1),
+        governanceAmount: new BN(100000),
       };
-
-      const [configContract] = PublicKey.findProgramAddressSync([Buffer.from('contract_config')], program.programId);
 
       const tx = await program.methods
         .initConfig(configArgs)
@@ -321,13 +321,6 @@ describe('dcarbon-contract', () => {
           signer: anchorProvider.wallet.publicKey,
           mint: new PublicKey('f5p4t6kbLSH7zJnxg8fMcAh5aec5zgLBffkm5qP1koR'),
         })
-        .remainingAccounts([
-          {
-            pubkey: configContract,
-            isWritable: true,
-            isSigner: false,
-          },
-        ])
         .rpc({
           skipPreflight: true,
         });
@@ -375,14 +368,11 @@ describe('dcarbon-contract', () => {
         minter: Keypair.generate().publicKey,
       };
 
-      const mint = Keypair.generate();
-
       const tx = await program.methods
         .registerDevice(registerDeviceArgs)
         .accounts({
           signer: upgradableAuthority.publicKey,
         })
-        .signers([mint])
         .rpc({
           skipPreflight: true,
         });
@@ -471,12 +461,13 @@ describe('dcarbon-contract', () => {
       };
 
       const { ethAddress, message, signature, recoveryId } = prepareParams();
-
+      const eth_address = '4d0155c687739bce9440ffb8aba911b00b21ea56';
+      const test = ethers.utils.arrayify('0x' + eth_address);
       const verifyMessageArgs: VerifyMessageArgs = {
-        hash: message,
+        msg: message,
         recoveryId: recoveryId,
-        signature: Buffer.from(signature),
-        expected: ethAddress,
+        sig: Array.from(signature),
+        ethAddress: Array.from(test),
       };
 
       // const [destination] = PublicKey.findProgramAddressSync([Buffer.from('destiantion')], program.programId);
@@ -486,7 +477,14 @@ describe('dcarbon-contract', () => {
       //   owner: destination,
       // });
 
-      const tx = await program.methods
+      const ins0 = anchor.web3.Secp256k1Program.createInstructionWithEthAddress({
+        ethAddress: ethAddress,
+        message: message,
+        signature: signature,
+        recoveryId: recoveryId,
+      });
+
+      const ins1 = await program.methods
         .mintSft(mintSftArgs, verifyMessageArgs)
         .accounts({
           signer: anchorProvider.wallet.publicKey,
@@ -495,16 +493,17 @@ describe('dcarbon-contract', () => {
           mint: mint.publicKey,
           metadata: metadata,
           tokenProgram: TOKEN_PROGRAM_ID,
-          sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
           tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
           ataProgram: ASSOCIATED_PROGRAM_ID,
         })
         .signers([mint])
-        .rpc({
-          skipPreflight: true,
-        });
+        .instruction();
 
-      console.log('Mint SFT: ', tx);
+      const tx = new Transaction().add(ins0).add(ins1);
+
+      const sig = await anchorProvider.sendAndConfirm(tx, [mint], { skipPreflight: true });
+
+      console.log('Mint SFT: ', sig);
     });
   });
 

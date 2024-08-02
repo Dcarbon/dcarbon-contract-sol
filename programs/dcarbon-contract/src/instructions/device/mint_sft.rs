@@ -1,4 +1,6 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::instruction::Instruction;
+use anchor_lang::solana_program::sysvar::instructions::{ID as IX_ID, load_instruction_at_checked};
 use anchor_spl::associated_token::get_associated_token_address;
 use mpl_token_metadata::instructions::{CreateCpiBuilder, MintCpiBuilder};
 use mpl_token_metadata::types::{CreateArgs, MintArgs};
@@ -19,13 +21,13 @@ pub struct MintSftArgs {
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct VerifyMessageArgs {
-    hash: Vec<u8>,
+    eth_address: [u8; 20],
+    msg: Vec<u8>,
+    sig: [u8; 64],
     recovery_id: u8,
-    signature: Vec<u8>,
-    expected: Vec<u8>,
 }
 
-pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_message_args: VerifyMessageArgs) -> Result<()> {
+pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_message_args: VerifyMessageArgs) -> Result<()> {
     let mint = &ctx.accounts.mint;
     let signer = &ctx.accounts.signer;
     let token_program = &ctx.accounts.token_program;
@@ -33,7 +35,7 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_messa
     let metadata = &ctx.accounts.metadata;
     let authority = &ctx.accounts.authority;
     let device_status = &ctx.accounts.device_status;
-    let contract_config = &ctx.accounts.contract_config;
+    // let contract_config = &ctx.accounts.contract_config;
     let token_metadata_program = &ctx.accounts.token_metadata_program;
     let governance = &mut ctx.accounts.governance;
     let owner_governance = &mut ctx.accounts.owner_governance;
@@ -42,6 +44,13 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_messa
     if !device_status.is_active {
         return Err(DCarbonError::DeviceIsNotActive.into());
     }
+
+    // verify signature
+    // Get what should be the Secp256k1Program instruction
+    let ix: Instruction = load_instruction_at_checked(0, &ctx.accounts.sysvar_program)?;
+
+    // Check that ix is what we expect to have been sent
+    utils::verify_secp256k1_ix(&ix, &verify_message_args.eth_address, &verify_message_args.msg, &verify_message_args.sig, verify_message_args.recovery_id)?;
 
     let seeds: &[&[u8]] = &[b"authority"];
 
@@ -135,7 +144,7 @@ pub struct MintSft<'info> {
         seeds = [Governance::PREFIX_SEED, device_owner.key().as_ref()],
         bump
     )]
-    pub owner_governance: Account<'info, Governance>,
+    pub owner_governance: Box<Account<'info, Governance>>,
 
     #[account(
         seeds = [Governance::PREFIX_SEED],
@@ -144,12 +153,13 @@ pub struct MintSft<'info> {
     )]
     pub governance: Account<'info, Governance>,
 
-    #[account(
-        mut,
-        seeds = [ContractConfig::PREFIX_SEED],
-        bump
-    )]
-    pub contract_config: Account<'info, ContractConfig>,
+    // #[account(
+    //     mut,
+    //     seeds = [ContractConfig::PREFIX_SEED],
+    //     bump
+    // )]
+    // /// CHECK:
+    // pub contract_config: AccountInfo<'info>,
 
     #[account(
         init,
@@ -158,7 +168,7 @@ pub struct MintSft<'info> {
         seeds = [Claim::PREFIX_SEED, mint.key().as_ref()],
         bump
     )]
-    pub claim: Account<'info, Claim>,
+    pub claim: Box<Account<'info, Claim>>,
 
     #[account(mut)]
     /// CHECK:
@@ -200,6 +210,7 @@ pub struct MintSft<'info> {
     pub system_program: Program<'info, System>,
 
     /// CHECK:
+    #[account(address = IX_ID)]
     pub sysvar_program: AccountInfo<'info>,
 
     /// CHECK:
