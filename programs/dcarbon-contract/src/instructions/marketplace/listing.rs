@@ -1,12 +1,11 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program::invoke_signed;
-use anchor_spl::token::{Mint, Token};
+use anchor_spl::token::Mint;
 use spl_token::instruction::approve_checked;
 use spl_token::solana_program::program::invoke;
 
 use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo};
 
-#[derive(Debug)]
+#[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ListingArgs {
     pub amount: u64,
     pub price: u64,

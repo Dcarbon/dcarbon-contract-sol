@@ -122,7 +122,6 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
     // check nonce, check valid
 
 
-
     Ok(())
 }
 

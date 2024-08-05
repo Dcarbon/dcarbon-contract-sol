@@ -8,14 +8,13 @@ pub fn init_config(
     ctx: Context<InitConfig>,
     config_args: ConfigArgs,
 ) -> Result<()> {
-    // let contract_config = &mut ctx.accounts.contract_config;
-    // let mint = &ctx.accounts.mint;
-    // let governance = &mut ctx.accounts.governance;
-    //
-    // governance.amount = config_args.governance_amount;
-    //
-    // contract_config.assign(config_args, mint.key())
-    Ok(())
+    let contract_config = &mut ctx.accounts.contract_config;
+    let mint = &ctx.accounts.mint;
+    let governance = &mut ctx.accounts.governance;
+
+    governance.amount = config_args.governance_amount;
+
+    contract_config.assign(config_args, mint.key())
 }
 
 #[derive(Accounts)]
