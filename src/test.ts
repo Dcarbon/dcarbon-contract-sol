@@ -5,8 +5,10 @@ import { Program } from '@coral-xyz/anchor';
 import IDL from '../target/idl/dcarbon_contract.json';
 import * as dotenv from 'dotenv';
 import {
+  createApproveCheckedInstruction,
   createInitializeMint2Instruction,
   createSetAuthorityInstruction,
+  getAssociatedTokenAddressSync,
   getMinimumBalanceForRentExemptMint,
   MINT_SIZE,
 } from '@solana/spl-token';
@@ -74,3 +76,32 @@ const disableMint = async () => {
 
 disableMint();
 transferMasterRight();
+
+const delegateToken = async () => {
+  const mint = new PublicKey('49912SPjYgzU2UmLBcN1rmq8BHe8YgyYssPoxSPEYAaE');
+
+  const randomGuy = Keypair.generate();
+  const signer = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY));
+
+  const tokenAccountPubkey = getAssociatedTokenAddressSync(mint, signer.publicKey);
+
+  const tx = new Transaction().add(
+    createApproveCheckedInstruction(
+      tokenAccountPubkey, // token account
+      mint, // mint
+      randomGuy.publicKey, // delegate
+      signer.publicKey, // owner of token account
+      1, // amount, if your deciamls is 8, 10^8 for 1 token
+      0, // decimals
+    ),
+  );
+
+  const connection = new Connection(process.env.DEV_RPC_ENDPOINT);
+
+  const sig = await connection.sendTransaction(tx, [signer], {
+    skipPreflight: true,
+  });
+
+  console.log('Sig: ', sig);
+};
+delegateToken();
