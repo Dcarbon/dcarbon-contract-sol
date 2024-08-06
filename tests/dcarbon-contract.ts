@@ -19,11 +19,12 @@ import {
   Transaction,
 } from '@solana/web3.js';
 import { ASSOCIATED_PROGRAM_ID, associatedAddress, TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
-import { createAccount, generateRandomObjectId, sleep } from './utils';
+import { createAccount, getRandomU16, sleep } from './utils';
 import * as dotenv from 'dotenv';
 import { expect } from 'chai';
 import BN from 'bn.js';
 import { prepareParams } from '../src/verify';
+import { ethers } from 'ethers';
 
 dotenv.config();
 
@@ -311,9 +312,8 @@ describe('dcarbon-contract', () => {
       const configArgs: ConfigArgs = {
         mintingFee: new BN(11),
         rate: new BN(1),
+        governanceAmount: new BN(100000),
       };
-
-      const [configContract] = PublicKey.findProgramAddressSync([Buffer.from('contract_config')], program.programId);
 
       const tx = await program.methods
         .initConfig(configArgs)
@@ -321,13 +321,6 @@ describe('dcarbon-contract', () => {
           signer: anchorProvider.wallet.publicKey,
           mint: new PublicKey('f5p4t6kbLSH7zJnxg8fMcAh5aec5zgLBffkm5qP1koR'),
         })
-        .remainingAccounts([
-          {
-            pubkey: configContract,
-            isWritable: true,
-            isSigner: false,
-          },
-        ])
         .rpc({
           skipPreflight: true,
         });
@@ -335,22 +328,37 @@ describe('dcarbon-contract', () => {
       console.log('Init contract config: ', tx);
     });
 
-    it('Set coefficient', async () => {
-      const deviceId = generateRandomObjectId();
+    xit('Set coefficient', async () => {
+      const key = Keypair.generate().publicKey;
       const value = new BN(1);
 
-      const tx = await program.methods.setCoefficient(deviceId, value).accounts({}).rpc({
+      const tx = await program.methods.setCoefficient(key, value).accounts({}).rpc({
         skipPreflight: true,
       });
 
       console.log('Set coefficient: ', tx);
     });
+
+    xit('Set minting fee', async () => {
+      const mintingFee = new BN(1);
+
+      const tx = await program.methods
+        .setMintingFee(mintingFee)
+        .accounts({
+          signer: upgradableAuthority.publicKey,
+        })
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Set minting fee: ', tx);
+    });
   });
 
   describe('Device', () => {
     xit('Register device', async () => {
-      const projectId = generateRandomObjectId();
-      const deviceId = generateRandomObjectId();
+      const projectId = getRandomU16();
+      const deviceId = getRandomU16();
 
       const registerDeviceArgs: RegisterDeviceArgs = {
         projectId,
@@ -360,14 +368,11 @@ describe('dcarbon-contract', () => {
         minter: Keypair.generate().publicKey,
       };
 
-      const mint = Keypair.generate();
-
       const tx = await program.methods
         .registerDevice(registerDeviceArgs)
         .accounts({
           signer: upgradableAuthority.publicKey,
         })
-        .signers([mint])
         .rpc({
           skipPreflight: true,
         });
@@ -376,8 +381,8 @@ describe('dcarbon-contract', () => {
     });
 
     xit('Set active', async () => {
-      const projectId = generateRandomObjectId();
-      const deviceId = generateRandomObjectId();
+      const projectId = getRandomU16();
+      const deviceId = getRandomU16();
 
       const registerDeviceArgs: RegisterDeviceArgs = {
         projectId,
@@ -410,8 +415,29 @@ describe('dcarbon-contract', () => {
       console.log('Set active', tx2);
     });
 
-    xit('Mint sft', async () => {
-      const { projectId, deviceId, owner, mint, metadata } = await setupDevice();
+    it('Mint sft', async () => {
+      const { projectId, deviceId, owner } = await setupDevice();
+
+      const mint = Keypair.generate();
+
+      const [metadata] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const createArgsVec: CreateArgsArgs = {
+        __kind: 'V1',
+        name: 'DCarbon Token',
+        symbol: 'DCPT',
+        uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
+        sellerFeeBasisPoints: percentAmount(5.5),
+        decimals: some(0),
+        creators: null,
+        tokenStandard: TokenStandard.FungibleAsset,
+      };
+
+      const serialize1 = getCreateArgsSerializer();
+      const data1 = serialize1.serialize(createArgsVec);
 
       const mintArgs: MintArgsArgs = {
         __kind: 'V1',
@@ -419,7 +445,7 @@ describe('dcarbon-contract', () => {
         authorizationData: null,
       };
 
-      const toAta = associatedAddress({
+      const ownerAta = associatedAddress({
         mint: mint.publicKey,
         owner: owner,
       });
@@ -430,39 +456,54 @@ describe('dcarbon-contract', () => {
       const mintSftArgs: MintSftArgs = {
         projectId: projectId,
         deviceId: deviceId,
-        createMintDataVec: Buffer.from([1]),
+        createMintDataVec: Buffer.from(data1),
         mintDataVec: Buffer.from(data),
       };
 
       const { ethAddress, message, signature, recoveryId } = prepareParams();
-
-      console.log(message.length, signature.length, ethAddress.length);
-
+      const eth_address = '4d0155c687739bce9440ffb8aba911b00b21ea56';
+      const test = ethers.utils.arrayify('0x' + eth_address);
       const verifyMessageArgs: VerifyMessageArgs = {
-        hash: message,
+        msg: message,
         recoveryId: recoveryId,
-        signature: Buffer.from(signature),
-        expected: ethAddress,
+        sig: Array.from(signature),
+        ethAddress: Array.from(test),
       };
 
-      const tx = await program.methods
+      // const [destination] = PublicKey.findProgramAddressSync([Buffer.from('destiantion')], program.programId);
+
+      // const destinationAta = associatedAddress({
+      //   mint: mint.publicKey,
+      //   owner: destination,
+      // });
+
+      const ins0 = anchor.web3.Secp256k1Program.createInstructionWithEthAddress({
+        ethAddress: ethAddress,
+        message: message,
+        signature: signature,
+        recoveryId: recoveryId,
+      });
+
+      const ins1 = await program.methods
         .mintSft(mintSftArgs, verifyMessageArgs)
         .accounts({
           signer: anchorProvider.wallet.publicKey,
           deviceOwner: owner,
-          ownerAta: toAta,
+          ownerAta: ownerAta,
           mint: mint.publicKey,
           metadata: metadata,
           tokenProgram: TOKEN_PROGRAM_ID,
-          sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
           tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
           ataProgram: ASSOCIATED_PROGRAM_ID,
         })
-        .rpc({
-          skipPreflight: true,
-        });
+        .signers([mint])
+        .instruction();
 
-      console.log('Mint SFT: ', tx);
+      const tx = new Transaction().add(ins0).add(ins1);
+
+      const sig = await anchorProvider.sendAndConfirm(tx, [mint], { skipPreflight: true });
+
+      console.log('Mint SFT: ', sig);
     });
   });
 
@@ -890,8 +931,8 @@ describe('dcarbon-contract', () => {
   });
 
   const setupDevice = async () => {
-    const projectId = generateRandomObjectId();
-    const deviceId = generateRandomObjectId();
+    const projectId = getRandomU16();
+    const deviceId = getRandomU16();
 
     const owner = Keypair.generate().publicKey;
 
@@ -903,19 +944,11 @@ describe('dcarbon-contract', () => {
       minter: upgradableAuthority.publicKey,
     };
 
-    const mint = Keypair.generate();
-
-    const [metadata] = PublicKey.findProgramAddressSync(
-      [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
-      TOKEN_METADATA_PROGRAM_ID,
-    );
-
     const tx = await program.methods
       .registerDevice(registerDeviceArgs)
       .accounts({
         signer: upgradableAuthority.publicKey,
       })
-      .signers([mint])
       .rpc({
         skipPreflight: true,
       });
@@ -937,8 +970,6 @@ describe('dcarbon-contract', () => {
       projectId,
       deviceId,
       owner,
-      mint,
-      metadata,
     };
   };
 });

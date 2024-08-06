@@ -45,8 +45,8 @@ pub mod dcarbon_contract {
         instructions::create_ft(ctx, create_ft_args)
     }
 
-    pub fn init_config<'c: 'info, 'info>(
-        ctx: Context<'_, '_, 'c, 'info, InitConfig<'info>>,
+    pub fn init_config(
+        ctx: Context<InitConfig>,
         config_args: ConfigArgs,
     ) -> Result<()> {
         instructions::init_config(ctx, config_args)
@@ -64,15 +64,15 @@ pub mod dcarbon_contract {
         instructions::set_rate(ctx, rate)
     }
 
-    pub fn set_coefficient(ctx: Context<SetCoefficient>, device_id: String, value: u64) -> Result<()> {
-        instructions::set_coefficient(ctx, device_id, value)
+    pub fn set_coefficient(ctx: Context<SetCoefficient>, key: Pubkey, value: u64) -> Result<()> {
+        instructions::set_coefficient(ctx, key, value)
     }
 
     pub fn register_device(ctx: Context<RegisterDevice>, register_device_args: RegisterDeviceArgs) -> Result<()> {
         instructions::register_device(ctx, register_device_args)
     }
 
-    pub fn set_active(ctx: Context<SetActive>, project_id: String, device_id: String) -> Result<()> {
+    pub fn set_active(ctx: Context<SetActive>, project_id: u16, device_id: u16) -> Result<()> {
         instructions::set_active(ctx, project_id, device_id)
     }
 

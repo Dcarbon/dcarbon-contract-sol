@@ -1,30 +1,34 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::instruction::Instruction;
+use anchor_lang::solana_program::sysvar::instructions::{ID as IX_ID, load_instruction_at_checked};
 use anchor_spl::associated_token::get_associated_token_address;
 use mpl_token_metadata::instructions::{CreateCpiBuilder, MintCpiBuilder};
 use mpl_token_metadata::types::{CreateArgs, MintArgs};
+// use eip712::*;
 
 use crate::*;
 use crate::error::DCarbonError;
-use crate::state::{ContractConfig, Device, DeviceStatus};
+use crate::state::{Claim, ContractConfig, Device, DeviceStatus, Governance};
 use crate::utils::assert_keys_equal;
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct MintSftArgs {
-    project_id: String,
-    device_id: String,
+    project_id: u16,
+    device_id: u16,
+    // total amount
     create_mint_data_vec: Vec<u8>,
     mint_data_vec: Vec<u8>,
 }
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct VerifyMessageArgs {
-    hash: Vec<u8>,
+    eth_address: [u8; 20],
+    msg: Vec<u8>,
+    sig: [u8; 64],
     recovery_id: u8,
-    signature: Vec<u8>,
-    expected: Vec<u8>,
 }
 
-pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_message_args: VerifyMessageArgs) -> Result<()> {
+pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_message_args: VerifyMessageArgs) -> Result<()> {
     let mint = &ctx.accounts.mint;
     let signer = &ctx.accounts.signer;
     let token_program = &ctx.accounts.token_program;
@@ -32,15 +36,22 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_messa
     let metadata = &ctx.accounts.metadata;
     let authority = &ctx.accounts.authority;
     let device_status = &ctx.accounts.device_status;
-    let contract_config = &ctx.accounts.contract_config;
-    let destination_ata = &ctx.accounts.destination_ata;
+    // let contract_config = &ctx.accounts.contract_config;
     let token_metadata_program = &ctx.accounts.token_metadata_program;
-    let destination = &ctx.accounts.destination;
+    let governance = &mut ctx.accounts.governance;
+    let owner_governance = &mut ctx.accounts.owner_governance;
 
     // check is active
     if !device_status.is_active {
         return Err(DCarbonError::DeviceIsNotActive.into());
     }
+
+    // verify signature
+    // Get what should be the Secp256k1Program instruction
+    let ix: Instruction = load_instruction_at_checked(0, &ctx.accounts.sysvar_program)?;
+
+    // Check that ix is what we expect to have been sent
+    utils::verify_secp256k1_ix(&ix, &verify_message_args.eth_address, &verify_message_args.msg, &verify_message_args.sig, verify_message_args.recovery_id)?;
 
     let seeds: &[&[u8]] = &[b"authority"];
 
@@ -88,50 +99,30 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, _verify_messa
         .mint_args(mint_data.clone())
         .invoke_signed(&[seeds_signer])?;
 
-    // increase something
+    // increase fee amount
     match &mint_data {
         MintArgs::V1 { amount, .. } => {
-            let total_amount = amount / (1u64 - contract_config.minting_fee * 1e9 as u64);
+            // let total_amount = amount / ((10u64 - contract_config.minting_fee) / 10);
 
-            let minting_fee = total_amount - amount;
+            let claim = &mut ctx.accounts.claim;
+            claim.mint = mint.key();
+            // hard code
+            claim.amount = 1;
 
-            let mint_destination_args = MintArgs::V1 {
-                amount: minting_fee,
-                authorization_data: None,
-            };
+            // increase dCarbon
+            if governance.amount > 0 && governance.amount >= *amount {
+                governance.amount -= amount;
+                owner_governance.amount += amount;
+            }
 
-            let seeds: &[&[u8]] = &[b"destiantion"];
-
-            let (address, _) = Pubkey::find_program_address(&seeds, &ID);
-
-            // check destination
-            assert_keys_equal(destination.key, &address)?;
-
-            let destination_ata_checked = &get_associated_token_address(&address, mint.key);
-
-            // check destination ata
-            assert_keys_equal(destination_ata_checked, destination_ata.key)?;
-
-            MintCpiBuilder::new(token_metadata_program)
-                .token(&destination_ata)
-                .token_owner(Some(&destination))
-                .metadata(metadata)
-                .master_edition(None)
-                .token_record(None)
-                .mint(&mint.to_account_info())
-                .authority(authority)
-                .delegate_record(None)
-                .payer(&signer.to_account_info())
-                .system_program(&system_program.to_account_info())
-                .sysvar_instructions(&ctx.accounts.sysvar_program)
-                .spl_token_program(token_program)
-                .spl_ata_program(&ctx.accounts.ata_program)
-                .authorization_rules(None)
-                .authorization_rules_program(None)
-                .mint_args(mint_destination_args.clone())
-                .invoke_signed(&[seeds_signer])?;
-        },
+            msg!("mintinfo_{}_{}_{}_{}_{}_{}", mint_sft_args.project_id, mint_sft_args.device_id, device_status.nonce, amount, claim.amount, amount);
+        }
     };
+
+
+    // check nonce, check valid
+
+
 
     Ok(())
 }
@@ -152,32 +143,51 @@ pub struct MintSft<'info> {
     pub device_owner: AccountInfo<'info>,
 
     #[account(
-        mut,
-        seeds = [ContractConfig::PREFIX_SEED],
+        init_if_needed,
+        space = 8 + Governance::INIT_SPACE,
+        payer = signer,
+        seeds = [Governance::PREFIX_SEED, device_owner.key().as_ref()],
         bump
     )]
-    pub contract_config: Account<'info, ContractConfig>,
+    pub owner_governance: Box<Account<'info, Governance>>,
+
+    #[account(
+        seeds = [Governance::PREFIX_SEED],
+        bump,
+        owner = ID
+    )]
+    pub governance: Account<'info, Governance>,
+
+    // #[account(
+    //     mut,
+    //     seeds = [ContractConfig::PREFIX_SEED],
+    //     bump
+    // )]
+    // /// CHECK:
+    // pub contract_config: AccountInfo<'info>,
+
+    #[account(
+        init,
+        payer = signer,
+        space = 8 + Claim::INIT_SPACE,
+        seeds = [Claim::PREFIX_SEED, mint.key().as_ref()],
+        bump
+    )]
+    pub claim: Box<Account<'info, Claim>>,
 
     #[account(mut)]
     /// CHECK:
     pub owner_ata: AccountInfo<'info>,
 
-    /// CHECK:
-    pub destination: AccountInfo<'info>,
-
-    #[account(mut)]
-    /// CHECK:
-    pub destination_ata: AccountInfo<'info>,
-
     #[account(
-        seeds = [Device::PREFIX_SEED, mint_sft_args.project_id.as_bytes(), mint_sft_args.device_id.as_bytes()],
+        seeds = [Device::PREFIX_SEED, & mint_sft_args.project_id.to_le_bytes(), & mint_sft_args.device_id.to_le_bytes()],
         bump,
         owner = ID,
     )]
     pub device: Account<'info, Device>,
 
     #[account(
-        seeds = [DeviceStatus::PREFIX_SEED, device.key().as_ref()],
+        seeds = [DeviceStatus::PREFIX_SEED, & mint_sft_args.device_id.to_le_bytes()],
         bump,
         owner = ID,
     )]
@@ -196,6 +206,7 @@ pub struct MintSft<'info> {
     pub mint: Signer<'info>,
 
     /// CHECK:
+    #[account(mut)]
     pub metadata: AccountInfo<'info>,
 
     /// CHECK:
@@ -204,6 +215,7 @@ pub struct MintSft<'info> {
     pub system_program: Program<'info, System>,
 
     /// CHECK:
+    #[account(address = IX_ID)]
     pub sysvar_program: AccountInfo<'info>,
 
     /// CHECK:

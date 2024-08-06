@@ -11,7 +11,7 @@ dcarbon_contract = "75eELePzbpEwD1tAEvYna5ZJtC26GeU42uF3ycyyTCt2"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "https://kathlin-5yytwf-fast-devnet.helius-rpc.com"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

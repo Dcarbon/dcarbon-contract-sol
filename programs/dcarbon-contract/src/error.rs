@@ -18,5 +18,10 @@ pub enum DCarbonError {
     ContractConfigIsAlreadyInit,
 
     #[msg("Must active this device to mint semi-fungible token")]
-    DeviceIsNotActive
+    DeviceIsNotActive,
+
+    SigVerificationFailed,
+
+    #[msg("Init config for contract is invalid")]
+    InitArgsInvalid
 }
