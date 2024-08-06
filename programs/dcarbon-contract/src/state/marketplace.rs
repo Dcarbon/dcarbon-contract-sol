@@ -10,4 +10,15 @@ pub struct TokenListingInfo {
     pub project_id: u16,
 }
 
+#[account]
+#[derive(Debug, InitSpace)]
+pub struct MarketplaceCounter {
+    pub nonce: u32,
+}
+
+impl MarketplaceCounter {
+    pub const PREFIX_SEED: &'static [u8] = b"counter";
+
+}
+
 pub const MARKETPLACE_PREFIX_SEED: &'static [u8] = b"marketplace";

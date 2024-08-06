@@ -23,5 +23,10 @@ pub enum DCarbonError {
     SigVerificationFailed,
 
     #[msg("Init config for contract is invalid")]
-    InitArgsInvalid
+    InitArgsInvalid,
+
+    #[msg("")]
+    InvalidNonce,
+
+    NotMintTime,
 }
