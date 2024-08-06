@@ -79,4 +79,16 @@ pub mod dcarbon_contract {
     pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_message_args: VerifyMessageArgs) -> Result<()> {
         instructions::mint_sft(ctx, mint_sft_args, verify_message_args)
     }
+
+    pub fn swap_sft(ctx: Context<SwapSft>, burn_data_vec: Vec<u8>, mint_data_vec: Vec<u8>) -> Result<()> {
+        instructions::swap_sft(ctx, burn_data_vec, mint_data_vec)
+    }
+
+    pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
+        instructions::listing(ctx, listing_args)
+    }
+
+    pub fn buy(ctx: Context<Buy>, amount: u64) -> Result<()> {
+        instructions::buy(ctx, amount)
+    }
 }

@@ -4,7 +4,6 @@ use anchor_lang::solana_program::sysvar::instructions::{ID as IX_ID, load_instru
 use anchor_spl::associated_token::get_associated_token_address;
 use mpl_token_metadata::instructions::{CreateCpiBuilder, MintCpiBuilder};
 use mpl_token_metadata::types::{CreateArgs, MintArgs};
-// use eip712::*;
 
 use crate::*;
 use crate::error::DCarbonError;
@@ -121,7 +120,6 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
 
 
     // check nonce, check valid
-
 
 
     Ok(())

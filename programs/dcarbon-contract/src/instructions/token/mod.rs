@@ -1,4 +1,4 @@
 pub use create_ft::*;
-
+pub use swap_sft::*;
 pub mod create_ft;
-mod swap_sft;
+pub mod swap_sft;
