@@ -14,6 +14,7 @@ use crate::utils::assert_keys_equal;
 pub struct MintSftArgs {
     project_id: u16,
     device_id: u16,
+    nonce: u16,
     // total amount
     create_mint_data_vec: Vec<u8>,
     mint_data_vec: Vec<u8>,
@@ -34,7 +35,7 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
     let system_program = &ctx.accounts.system_program;
     let metadata = &ctx.accounts.metadata;
     let authority = &ctx.accounts.authority;
-    let device_status = &ctx.accounts.device_status;
+    let device_status = &mut ctx.accounts.device_status;
     // let contract_config = &ctx.accounts.contract_config;
     let token_metadata_program = &ctx.accounts.token_metadata_program;
     let governance = &mut ctx.accounts.governance;
@@ -44,6 +45,20 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
     if !device_status.is_active {
         return Err(DCarbonError::DeviceIsNotActive.into());
     }
+
+    // check nonce, check valid
+    if mint_sft_args.nonce != device_status.nonce + 1 {
+        return Err(DCarbonError::InvalidNonce.into());
+    }
+
+    // check time
+    let clock = Clock::get()?;
+    let current_timestamp = clock.unix_timestamp;
+    if current_timestamp < device_status.last_mint_time + 86400 {
+        return Err(DCarbonError::NotMintTime.into());
+    }
+
+    // check limit, after
 
     // verify signature
     // Get what should be the Secp256k1Program instruction
@@ -107,6 +122,7 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
             claim.mint = mint.key();
             // hard code
             claim.amount = 1;
+            claim.project_id = mint_sft_args.project_id;
 
             // increase dCarbon
             if governance.amount > 0 && governance.amount >= *amount {
@@ -119,8 +135,9 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
     };
 
 
-    // check nonce, check valid
-
+    // increase
+    device_status.nonce += 1;
+    device_status.last_mint_time = current_timestamp;
 
     Ok(())
 }
@@ -185,6 +202,7 @@ pub struct MintSft<'info> {
     pub device: Account<'info, Device>,
 
     #[account(
+        mut,
         seeds = [DeviceStatus::PREFIX_SEED, & mint_sft_args.device_id.to_le_bytes()],
         bump,
         owner = ID,

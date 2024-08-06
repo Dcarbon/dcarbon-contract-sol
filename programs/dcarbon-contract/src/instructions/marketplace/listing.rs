@@ -3,13 +3,15 @@ use anchor_spl::token::Mint;
 use spl_token::instruction::approve_checked;
 use spl_token::solana_program::program::invoke;
 
-use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo};
+use crate::error::DCarbonError;
+use crate::state::{MARKETPLACE_PREFIX_SEED, MarketplaceCounter, TokenListingInfo};
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ListingArgs {
     pub amount: u64,
     pub price: u64,
     pub project_id: u16,
+    pub nonce: u32,
 }
 
 pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
@@ -19,6 +21,11 @@ pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
     let delegate = &ctx.accounts.marketplace_delegate;
     let signer = &ctx.accounts.signer;
     let token_listing_info = &mut ctx.accounts.token_listing_info;
+    let marketplace_counter = &mut ctx.accounts.marketplace_counter;
+
+    if marketplace_counter.nonce != listing_args.nonce {
+        return Err(DCarbonError::InvalidNonce.into());
+    }
 
     let approve_checked_ins = approve_checked(token_program.key, &source_ata.key(), &mint.key(), delegate.key, signer.key, &[], listing_args.amount, mint.decimals)?;
 
@@ -30,10 +37,13 @@ pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
     token_listing_info.mint = mint.key();
     token_listing_info.project_id = listing_args.project_id;
 
+
+    marketplace_counter.nonce += 1;
     Ok(())
 }
 
 #[derive(Accounts)]
+#[instruction(listing_args: ListingArgs)]
 pub struct Listing<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -48,7 +58,7 @@ pub struct Listing<'info> {
         init_if_needed,
         payer = signer,
         space = 8 + TokenListingInfo::INIT_SPACE,
-        seeds = [MARKETPLACE_PREFIX_SEED, mint.key().as_ref()],
+        seeds = [MARKETPLACE_PREFIX_SEED, mint.key().as_ref(), signer.key().as_ref(), & listing_args.nonce.to_le_bytes()],
         bump,
     )]
     pub token_listing_info: Account<'info, TokenListingInfo>,
@@ -62,6 +72,15 @@ pub struct Listing<'info> {
     )]
     /// CHECK:
     pub marketplace_delegate: AccountInfo<'info>,
+
+    #[account(
+        init_if_needed,
+        payer = signer,
+        space = 8 + MarketplaceCounter::INIT_SPACE,
+        seeds = [MARKETPLACE_PREFIX_SEED, MarketplaceCounter::PREFIX_SEED],
+        bump
+    )]
+    pub marketplace_counter: Account<'info, MarketplaceCounter>,
 
     /// CHECK:
     pub token_program: AccountInfo<'info>,

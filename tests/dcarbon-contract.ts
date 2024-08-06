@@ -35,6 +35,7 @@ type RegisterDeviceArgs = IdlTypes<DcarbonContract>['registerDeviceArgs'];
 type CreateFtArgs = IdlTypes<DcarbonContract>['createFtArgs'];
 type MintSftArgs = IdlTypes<DcarbonContract>['mintSftArgs'];
 type VerifyMessageArgs = IdlTypes<DcarbonContract>['verifyMessageArgs'];
+type ListingArgs = IdlTypes<DcarbonContract>['listingArgs'];
 
 describe('dcarbon-contract', () => {
   // Configure the client to use the local cluster.
@@ -458,6 +459,7 @@ describe('dcarbon-contract', () => {
         deviceId: deviceId,
         createMintDataVec: Buffer.from(data1),
         mintDataVec: Buffer.from(data),
+        nonce: 1,
       };
 
       const { ethAddress, message, signature, recoveryId } = prepareParams();
@@ -504,6 +506,27 @@ describe('dcarbon-contract', () => {
       const sig = await anchorProvider.sendAndConfirm(tx, [mint], { skipPreflight: true });
 
       console.log('Mint SFT: ', sig);
+    });
+  });
+  describe('Marketplace', () => {
+    xit('Listing token', async () => {
+      const listingArgs: ListingArgs = {
+        amount: new BN(1),
+        price: new BN(1),
+        projectId: 0,
+        nonce: 0,
+      };
+
+      const tx = await program.methods
+        .listing(listingArgs)
+        .accounts({
+          signer: upgradableAuthority.publicKey,
+        })
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Tx: ', tx);
     });
   });
 
