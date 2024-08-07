@@ -189,7 +189,7 @@ export const prepareParams = () => {
     const hashMessage = Buffer.concat([prefix, domainSeparator, messageHash]);
 
     const ethAddress = Buffer.from(message.iot.slice(2), 'hex');
-    console.log(ethAddress.length, hashMessage.length, signature.length, recoveryId);
+
     // struct to pass to createInstructionWithEthAddress
     return {
       ethAddress: ethAddress,

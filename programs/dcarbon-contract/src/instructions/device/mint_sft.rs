@@ -88,60 +88,66 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
         .system_program(&system_program.to_account_info())
         .sysvar_instructions(&ctx.accounts.sysvar_program)
         .spl_token_program(Some(&token_program.to_account_info()))
-        .create_args(create_data)
+        .create_args(create_data.clone())
         .invoke_signed(&[seeds_signer])?;
 
-    let minting_fee = (mint_sft_args.total_amount as f64 * contract_config.minting_fee) as u64 / 10;
+    if let CreateArgs::V1 { decimals, .. } = create_data.clone() {
+        match decimals {
+            Some(decimals) => {
+                let minting_fee = (mint_sft_args.total_amount as f64 * contract_config.minting_fee / 10f64.powf(decimals as f64)) as u64;
 
-    let minting_amount = mint_sft_args.total_amount - minting_fee;
+                let minting_amount = mint_sft_args.total_amount - minting_fee;
 
-    // mint for owner
-    let mint_data = MintArgs::V1 {
-        amount: minting_amount,
-        authorization_data: None,
-    };
+                // mint for owner
+                let mint_data = MintArgs::V1 {
+                    amount: minting_amount,
+                    authorization_data: None,
+                };
 
-    MintCpiBuilder::new(token_metadata_program)
-        .token(&ctx.accounts.owner_ata)
-        .token_owner(Some(&ctx.accounts.device_owner))
-        .metadata(metadata)
-        .master_edition(None)
-        .token_record(None)
-        .mint(&mint.to_account_info())
-        .authority(authority)
-        .delegate_record(None)
-        .payer(&signer.to_account_info())
-        .system_program(&system_program.to_account_info())
-        .sysvar_instructions(&ctx.accounts.sysvar_program)
-        .spl_token_program(token_program)
-        .spl_ata_program(&ctx.accounts.ata_program)
-        .authorization_rules(None)
-        .authorization_rules_program(None)
-        .mint_args(mint_data.clone())
-        .invoke_signed(&[seeds_signer])?;
+                MintCpiBuilder::new(token_metadata_program)
+                    .token(&ctx.accounts.owner_ata)
+                    .token_owner(Some(&ctx.accounts.device_owner))
+                    .metadata(metadata)
+                    .master_edition(None)
+                    .token_record(None)
+                    .mint(&mint.to_account_info())
+                    .authority(authority)
+                    .delegate_record(None)
+                    .payer(&signer.to_account_info())
+                    .system_program(&system_program.to_account_info())
+                    .sysvar_instructions(&ctx.accounts.sysvar_program)
+                    .spl_token_program(token_program)
+                    .spl_ata_program(&ctx.accounts.ata_program)
+                    .authorization_rules(None)
+                    .authorization_rules_program(None)
+                    .mint_args(mint_data.clone())
+                    .invoke_signed(&[seeds_signer])?;
 
-    // increase fee amount
-    let claim = &mut ctx.accounts.claim;
-    claim.mint = mint.key();
+                // increase fee amount
+                let claim = &mut ctx.accounts.claim;
+                claim.mint = mint.key();
 
-    // hard code
-    claim.amount += minting_fee;
-    claim.project_id = mint_sft_args.project_id;
+                // hard code
+                claim.amount += minting_fee;
+                claim.project_id = mint_sft_args.project_id;
 
-    let governance_amount = (mint_sft_args.total_amount as f64 * contract_config.rate) as u64 / 10;
+                let governance_amount = (mint_sft_args.total_amount as f64 * contract_config.rate / 10f64.powf(decimals as f64)) as u64;
 
-    // increase dCarbon
-    if governance.amount > 0 && governance.amount >= governance_amount {
-        governance.amount -= governance_amount;
-        owner_governance.amount += governance_amount;
+                // increase dCarbon
+                if governance.amount > 0 && governance.amount >= governance_amount {
+                    governance.amount -= governance_amount;
+                    owner_governance.amount += governance_amount;
+                }
+
+                // increase
+                device_status.nonce += 1;
+                device_status.last_mint_time = current_timestamp;
+
+                msg!("mintinfo_{}_{}_{}_{}_{}_{}", mint_sft_args.project_id, mint_sft_args.device_id, mint_sft_args.nonce, minting_amount, minting_fee, governance_amount);
+            }
+            None => {}
+        }
     }
-
-    msg!("mintinfo_{}_{}_{}_{}_{}_{}", mint_sft_args.project_id, mint_sft_args.device_id, device_status.nonce, minting_amount, minting_fee, governance_amount);
-
-
-    // increase
-    device_status.nonce += 1;
-    device_status.last_mint_time = current_timestamp;
 
     Ok(())
 }
@@ -151,13 +157,13 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
 pub struct MintSft<'info> {
     #[account(
         mut,
-        constraint = signer.key() == device.minter,
+    // constraint = signer.key() == device.minter,
     )]
     pub signer: Signer<'info>,
 
     /// CHECK:
     #[account(
-        constraint = device_owner.key() == device.owner
+    // constraint = device_owner.key() == device.owner
     )]
     pub device_owner: AccountInfo<'info>,
 
@@ -198,12 +204,12 @@ pub struct MintSft<'info> {
     /// CHECK:
     pub owner_ata: AccountInfo<'info>,
 
-    #[account(
-        seeds = [Device::PREFIX_SEED, & mint_sft_args.project_id.to_le_bytes(), & mint_sft_args.device_id.to_le_bytes()],
-        bump,
-        owner = ID,
-    )]
-    pub device: Account<'info, Device>,
+    // #[account(
+    //     seeds = [Device::PREFIX_SEED, & mint_sft_args.project_id.to_le_bytes(), & mint_sft_args.device_id.to_le_bytes()],
+    //     bump,
+    //     owner = ID,
+    // )]
+    // pub device: Account<'info, Device>,
 
     #[account(
         mut,

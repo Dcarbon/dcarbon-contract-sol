@@ -29,7 +29,15 @@ pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
 
     let approve_checked_ins = approve_checked(token_program.key, &source_ata.key(), &mint.key(), delegate.key, signer.key, &[], listing_args.amount, mint.decimals)?;
 
-    invoke(&approve_checked_ins, &[token_program.clone()])?;
+    invoke(
+        &approve_checked_ins,
+        &[token_program.clone(),
+            source_ata.clone(),
+            mint.to_account_info(),
+            delegate.clone(),
+            signer.to_account_info(),
+        ],
+    )?;
 
     token_listing_info.amount = listing_args.amount;
     token_listing_info.owner = signer.key();
