@@ -23,6 +23,7 @@ import { expect } from 'chai';
 import BN from 'bn.js';
 import { prepareParams } from '../src/verify';
 import { ethers } from 'ethers';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 
 dotenv.config();
 
@@ -419,6 +420,8 @@ describe('dcarbon-contract', () => {
 
       const mint = Keypair.generate();
 
+      console.log(mint.publicKey.toString());
+
       const [metadata] = PublicKey.findProgramAddressSync(
         [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
         TOKEN_METADATA_PROGRAM_ID,
@@ -430,7 +433,7 @@ describe('dcarbon-contract', () => {
         symbol: 'DCPT',
         uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
         sellerFeeBasisPoints: percentAmount(5.5),
-        decimals: some(0),
+        decimals: some(1),
         creators: null,
         tokenStandard: TokenStandard.FungibleAsset,
       };
@@ -447,7 +450,7 @@ describe('dcarbon-contract', () => {
         projectId: projectId,
         deviceId: deviceId,
         createMintDataVec: Buffer.from(data1),
-        totalAmount: new BN(11),
+        totalAmount: new BN(1000),
         nonce: 1,
       };
 
@@ -497,12 +500,18 @@ describe('dcarbon-contract', () => {
       console.log('Mint SFT: ', sig);
     });
   });
+
   describe('Marketplace', () => {
     xit('Listing token', async () => {
+      // get this mint from mins-sft
+      const mint = new PublicKey('Eqt18XghqXTXSHgWk6d3x91kiGArwca94h5w8cukv8kY');
+      const projectId = 6014;
+      const soureAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
+
       const listingArgs: ListingArgs = {
         amount: new BN(1),
         price: new BN(1),
-        projectId: 0,
+        projectId: projectId,
         nonce: 0,
       };
 
@@ -510,6 +519,9 @@ describe('dcarbon-contract', () => {
         .listing(listingArgs)
         .accounts({
           signer: upgradableAuthority.publicKey,
+          mint: mint,
+          sourceAta: soureAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({
           skipPreflight: true,
@@ -517,6 +529,8 @@ describe('dcarbon-contract', () => {
 
       console.log('Tx: ', tx);
     });
+
+    xit('Buying token', async () => {});
   });
 
   xit('Create mint', async () => {
@@ -946,8 +960,10 @@ describe('dcarbon-contract', () => {
     const projectId = getRandomU16();
     const deviceId = getRandomU16();
 
-    const owner = Keypair.generate().publicKey;
+    const owner = upgradableAuthority.publicKey;
 
+    // const owner = Keypair.generate().publicKey;
+    //
     const registerDeviceArgs: RegisterDeviceArgs = {
       projectId,
       deviceId,

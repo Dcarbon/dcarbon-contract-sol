@@ -27,7 +27,13 @@ pub fn buy(ctx: Context<Buy>, amount: u64) -> Result<()> {
 
     invoke_signed(
         &transfer_ins,
-        &[],
+        &[
+            token_program.clone(),
+            source_ata.clone(),
+            mint.to_account_info(),
+            to_ata.clone(),
+            delegate.clone(),
+        ],
         &[seeds_signer],
     )?;
 
