@@ -235,7 +235,7 @@ pub struct MintSft<'info> {
     pub token_program: AccountInfo<'info>,
 
     /// CHECK:
-    system_program: AccountInfo<'info>,
+    system_program: Program<'info, System>,
 
     /// CHECK:
     #[account(address = IX_ID)]

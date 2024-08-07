@@ -489,7 +489,6 @@ describe('dcarbon-contract', () => {
           tokenProgram: TOKEN_PROGRAM_ID,
           tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
           ataProgram: ASSOCIATED_PROGRAM_ID,
-          systemProgram: new PublicKey('11111111111111111111111111111111'),
         })
         .signers([mint])
         .instruction();
