@@ -29,4 +29,6 @@ pub enum DCarbonError {
     InvalidNonce,
 
     NotMintTime,
+
+    NotEnoughAmount
 }

@@ -6,7 +6,7 @@ use crate::instructions::RegisterDeviceArgs;
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct DeviceLimit {
     pub device_type: u16,
-    pub limit: u16,
+    pub limit: f64,
 }
 
 #[account]

@@ -39,6 +39,8 @@ pub struct InitConfig<'info> {
         payer = signer,
         seeds = [ContractConfig::PREFIX_SEED],
         bump,
+        // mut,
+        // close = signer
     )]
     pub contract_config: Account<'info, ContractConfig>,
 
@@ -60,5 +62,5 @@ pub struct InitConfig<'info> {
 pub struct ConfigArgs {
     pub minting_fee: f64,
     pub rate: f64,
-    pub governance_amount: u64,
+    pub governance_amount: f64,
 }

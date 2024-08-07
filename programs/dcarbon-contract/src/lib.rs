@@ -56,7 +56,7 @@ pub mod dcarbon_contract {
         instructions::set_minting_fee(ctx, minting_fee)
     }
 
-    pub fn set_minting_limit(ctx: Context<SetConfig>, device_type: u16, limit: u16) -> Result<()> {
+    pub fn set_minting_limit(ctx: Context<SetConfig>, device_type: u16, limit: f64) -> Result<()> {
         instructions::set_minting_limit(ctx, device_type, limit)
     }
 
@@ -88,7 +88,10 @@ pub mod dcarbon_contract {
         instructions::listing(ctx, listing_args)
     }
 
-    pub fn buy(ctx: Context<Buy>, amount: u64) -> Result<()> {
+    pub fn buy<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, Buy<'info>>,
+        amount: f64,
+    ) -> Result<()> {
         instructions::buy(ctx, amount)
     }
 }

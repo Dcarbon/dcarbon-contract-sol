@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 pub struct Claim {
     pub is_claimed: bool,
     pub mint: Pubkey,
-    pub amount: u64,
+    pub amount: f64,
     pub project_id: u16,
 }
 
