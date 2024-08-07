@@ -3,7 +3,8 @@ use anchor_lang::prelude::*;
 #[account]
 #[derive(Debug, InitSpace)]
 pub struct Coefficient {
-    pub key: Pubkey,
+    #[max_len(32)]
+    pub key: String,
     pub value: u64,
 }
 

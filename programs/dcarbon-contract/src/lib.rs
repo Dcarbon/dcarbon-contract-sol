@@ -52,7 +52,7 @@ pub mod dcarbon_contract {
         instructions::init_config(ctx, config_args)
     }
 
-    pub fn set_minting_fee(ctx: Context<SetConfig>, minting_fee: u64) -> Result<()> {
+    pub fn set_minting_fee(ctx: Context<SetConfig>, minting_fee: f64) -> Result<()> {
         instructions::set_minting_fee(ctx, minting_fee)
     }
 
@@ -60,11 +60,11 @@ pub mod dcarbon_contract {
         instructions::set_minting_limit(ctx, device_type, limit)
     }
 
-    pub fn set_rate(ctx: Context<SetConfig>, rate: u64) -> Result<()> {
+    pub fn set_rate(ctx: Context<SetConfig>, rate: f64) -> Result<()> {
         instructions::set_rate(ctx, rate)
     }
 
-    pub fn set_coefficient(ctx: Context<SetCoefficient>, key: Pubkey, value: u64) -> Result<()> {
+    pub fn set_coefficient(ctx: Context<SetCoefficient>, key: String, value: u64) -> Result<()> {
         instructions::set_coefficient(ctx, key, value)
     }
 
