@@ -8,10 +8,11 @@ use crate::state::{MARKETPLACE_PREFIX_SEED, MarketplaceCounter, TokenListingInfo
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ListingArgs {
-    pub amount: u64,
-    pub price: u64,
+    pub amount: f64,
+    pub price: f64,
     pub project_id: u16,
     pub nonce: u32,
+    pub currency: Option<Pubkey>,
 }
 
 pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
@@ -27,7 +28,16 @@ pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
         return Err(DCarbonError::InvalidNonce.into());
     }
 
-    let approve_checked_ins = approve_checked(token_program.key, &source_ata.key(), &mint.key(), delegate.key, signer.key, &[], listing_args.amount, mint.decimals)?;
+    let approve_checked_ins = approve_checked(
+        token_program.key,
+        &source_ata.key(),
+        &mint.key(),
+        delegate.key,
+        signer.key,
+        &[],
+        (listing_args.amount * 10f64.powf(mint.decimals as f64)) as u64,
+        mint.decimals
+    )?;
 
     invoke(
         &approve_checked_ins,
@@ -44,7 +54,7 @@ pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
     token_listing_info.price = listing_args.price;
     token_listing_info.mint = mint.key();
     token_listing_info.project_id = listing_args.project_id;
-
+    token_listing_info.currency = listing_args.currency;
 
     marketplace_counter.nonce += 1;
     Ok(())

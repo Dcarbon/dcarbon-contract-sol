@@ -312,7 +312,7 @@ describe('dcarbon-contract', () => {
       const configArgs: ConfigArgs = {
         mintingFee: 0.1,
         rate: 0.1,
-        governanceAmount: new BN(100000),
+        governanceAmount: 100_000,
       };
 
       const tx = await program.methods
@@ -415,7 +415,7 @@ describe('dcarbon-contract', () => {
       console.log('Set active', tx2);
     });
 
-    it('Mint sft', async () => {
+    xit('Mint sft', async () => {
       const { projectId, deviceId, owner } = await setupDevice();
 
       const mint = Keypair.generate();
@@ -450,7 +450,7 @@ describe('dcarbon-contract', () => {
         projectId: projectId,
         deviceId: deviceId,
         createMintDataVec: Buffer.from(data1),
-        totalAmount: new BN(1000),
+        totalAmount: 2,
         nonce: 1,
       };
 
@@ -502,17 +502,25 @@ describe('dcarbon-contract', () => {
   });
 
   describe('Marketplace', () => {
-    xit('Listing token', async () => {
+    it('Listing token with SOL', async () => {
       // get this mint from mins-sft
-      const mint = new PublicKey('Eqt18XghqXTXSHgWk6d3x91kiGArwca94h5w8cukv8kY');
-      const projectId = 6014;
+      const mint = new PublicKey('BjEJxqL8PH5mgjZiqNLvEjDTv28y3fxK8GDPHJYofqLQ');
+      const projectId = 48816;
       const soureAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
 
+      const [marketplaceCounter] = PublicKey.findProgramAddressSync(
+        [Buffer.from('marketplace'), Buffer.from('counter')],
+        program.programId,
+      );
+
+      const marketplaceCounterData = await program.account.marketplaceCounter.fetch(marketplaceCounter);
+
       const listingArgs: ListingArgs = {
-        amount: new BN(1),
-        price: new BN(1),
+        amount: 10,
+        price: 0.1,
         projectId: projectId,
-        nonce: 0,
+        nonce: marketplaceCounterData.nonce,
+        currency: null,
       };
 
       const tx = await program.methods
@@ -530,7 +538,41 @@ describe('dcarbon-contract', () => {
       console.log('Tx: ', tx);
     });
 
-    xit('Buying token', async () => {});
+    // xit('Buying token with SOL', async () => {
+    //   const buyer = Keypair.generate();
+    //   const mint = new PublicKey('BjEJxqL8PH5mgjZiqNLvEjDTv28y3fxK8GDPHJYofqLQ');
+    //   const token_owner = upgradableAuthority.publicKey;
+    //
+    //   await createAccount({
+    //     provider: anchorProvider,
+    //     newAccountKeypair: buyer,
+    //     lamports: LAMPORTS_PER_SOL / 10,
+    //   });
+    //
+    //   const [tokenListingInfo] = PublicKey.findProgramAddressSync([Buffer.from("marketplace"), mint.toBuffer(), token_owner.toBuffer(), nonce], program.programId);
+    //
+    //   const sourceAta = getAssociatedTokenAddressSync(mint, token_owner);
+    //   const toAta = getAssociatedTokenAddressSync(mint, buyer.publicKey)
+    //   const ins = await program.methods
+    //     .buy(new BN(10))
+    //     .accounts({
+    //       signer: buyer.publicKey,
+    //       mint: mint,
+    //       sourceAta: sourceAta,
+    //       toAta: toAta
+    //     })
+    //     .instruction();
+    //
+    //   const tx = new Transaction().add(ins);
+    //   tx.feePayer = buyer.publicKey;
+    //   tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    //
+    //   tx.partialSign(buyer);
+    //
+    //   const sig = await connection.sendTransaction(tx, [buyer], {
+    //     skipPreflight: true,
+    //   });
+    // });
   });
 
   xit('Create mint', async () => {

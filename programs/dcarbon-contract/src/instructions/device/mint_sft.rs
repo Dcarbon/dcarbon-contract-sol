@@ -1,14 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::solana_program::sysvar::instructions::{ID as IX_ID, load_instruction_at_checked};
-use anchor_spl::associated_token::get_associated_token_address;
 use mpl_token_metadata::instructions::{CreateCpiBuilder, MintCpiBuilder};
 use mpl_token_metadata::types::{CreateArgs, MintArgs};
 
 use crate::*;
 use crate::error::DCarbonError;
 use crate::state::{Claim, ContractConfig, Device, DeviceStatus, Governance};
-use crate::utils::assert_keys_equal;
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct MintSftArgs {
@@ -16,7 +14,7 @@ pub struct MintSftArgs {
     device_id: u16,
     nonce: u16,
     create_mint_data_vec: Vec<u8>,
-    total_amount: u64,
+    total_amount: f64,
 }
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
@@ -59,6 +57,8 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
     }
 
     // check limit, after
+    // let mut amount = mint_sft_args.total_amount;
+    // if amount > contract_config.minting_limits[]
 
     // verify signature
     // Get what should be the Secp256k1Program instruction
@@ -91,16 +91,18 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
         .create_args(create_data.clone())
         .invoke_signed(&[seeds_signer])?;
 
-    if let CreateArgs::V1 { decimals, .. } = create_data.clone() {
+
+    let CreateArgs::V1 { decimals, .. } = create_data.clone();
+    {
         match decimals {
             Some(decimals) => {
-                let minting_fee = (mint_sft_args.total_amount as f64 * contract_config.minting_fee / 10f64.powf(decimals as f64)) as u64;
+                let minting_fee = mint_sft_args.total_amount * contract_config.minting_fee;
 
                 let minting_amount = mint_sft_args.total_amount - minting_fee;
 
                 // mint for owner
                 let mint_data = MintArgs::V1 {
-                    amount: minting_amount,
+                    amount: (minting_amount * 10f64.powf(decimals as f64)) as u64,
                     authorization_data: None,
                 };
 
@@ -126,15 +128,13 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
                 // increase fee amount
                 let claim = &mut ctx.accounts.claim;
                 claim.mint = mint.key();
-
-                // hard code
                 claim.amount += minting_fee;
                 claim.project_id = mint_sft_args.project_id;
 
-                let governance_amount = (mint_sft_args.total_amount as f64 * contract_config.rate / 10f64.powf(decimals as f64)) as u64;
+                let governance_amount = mint_sft_args.total_amount as f64 * contract_config.rate;
 
                 // increase dCarbon
-                if governance.amount > 0 && governance.amount >= governance_amount {
+                if governance.amount > 0.0 && governance.amount >= governance_amount {
                     governance.amount -= governance_amount;
                     owner_governance.amount += governance_amount;
                 }
@@ -204,12 +204,8 @@ pub struct MintSft<'info> {
     /// CHECK:
     pub owner_ata: AccountInfo<'info>,
 
-    // #[account(
-    //     seeds = [Device::PREFIX_SEED, & mint_sft_args.project_id.to_le_bytes(), & mint_sft_args.device_id.to_le_bytes()],
-    //     bump,
-    //     owner = ID,
-    // )]
-    // pub device: Account<'info, Device>,
+    // /// CHECK:
+    // pub device: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -238,7 +234,8 @@ pub struct MintSft<'info> {
     /// CHECK:
     pub token_program: AccountInfo<'info>,
 
-    pub system_program: Program<'info, System>,
+    /// CHECK:
+    system_program: Program<'info, System>,
 
     /// CHECK:
     #[account(address = IX_ID)]

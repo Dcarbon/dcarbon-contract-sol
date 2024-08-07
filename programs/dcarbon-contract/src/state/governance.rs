@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 #[derive(Debug, InitSpace)]
 pub struct Governance {
     pub owner: Pubkey,
-    pub amount: u64,
+    pub amount: f64,
 }
 
 impl Governance {

@@ -5,9 +5,11 @@ use anchor_lang::prelude::*;
 pub struct TokenListingInfo {
     pub owner: Pubkey,
     pub mint: Pubkey,
-    pub amount: u64,
-    pub price: u64, // LAMPORT
+    pub amount: f64,
+    pub price: f64, // LAMPORT
     pub project_id: u16,
+    pub nonce: u32,
+    pub currency: Option<Pubkey>,
 }
 
 #[account]
@@ -18,7 +20,6 @@ pub struct MarketplaceCounter {
 
 impl MarketplaceCounter {
     pub const PREFIX_SEED: &'static [u8] = b"counter";
-
 }
 
 pub const MARKETPLACE_PREFIX_SEED: &'static [u8] = b"marketplace";
