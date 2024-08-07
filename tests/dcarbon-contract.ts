@@ -4,8 +4,6 @@ import { DcarbonContract } from '../target/types/dcarbon_contract';
 import {
   CreateArgsArgs,
   getCreateArgsSerializer,
-  getMintArgsSerializer,
-  MintArgsArgs,
   MPL_TOKEN_METADATA_PROGRAM_ID,
   TokenStandard,
 } from '@metaplex-foundation/mpl-token-metadata';
@@ -311,8 +309,8 @@ describe('dcarbon-contract', () => {
   describe('📕📕📕 Config', () => {
     xit('Init config', async () => {
       const configArgs: ConfigArgs = {
-        mintingFee: new BN(11),
-        rate: new BN(1),
+        mintingFee: 0.1,
+        rate: 0.1,
         governanceAmount: new BN(100000),
       };
 
@@ -330,7 +328,7 @@ describe('dcarbon-contract', () => {
     });
 
     xit('Set coefficient', async () => {
-      const key = Keypair.generate().publicKey;
+      const key = 'abc';
       const value = new BN(1);
 
       const tx = await program.methods.setCoefficient(key, value).accounts({}).rpc({
@@ -341,7 +339,7 @@ describe('dcarbon-contract', () => {
     });
 
     xit('Set minting fee', async () => {
-      const mintingFee = new BN(1);
+      const mintingFee = 0.1;
 
       const tx = await program.methods
         .setMintingFee(mintingFee)
@@ -440,25 +438,16 @@ describe('dcarbon-contract', () => {
       const serialize1 = getCreateArgsSerializer();
       const data1 = serialize1.serialize(createArgsVec);
 
-      const mintArgs: MintArgsArgs = {
-        __kind: 'V1',
-        amount: 5,
-        authorizationData: null,
-      };
-
       const ownerAta = associatedAddress({
         mint: mint.publicKey,
         owner: owner,
       });
 
-      const serialize = getMintArgsSerializer();
-      const data = serialize.serialize(mintArgs);
-
       const mintSftArgs: MintSftArgs = {
         projectId: projectId,
         deviceId: deviceId,
         createMintDataVec: Buffer.from(data1),
-        mintDataVec: Buffer.from(data),
+        totalAmount: new BN(11),
         nonce: 1,
       };
 

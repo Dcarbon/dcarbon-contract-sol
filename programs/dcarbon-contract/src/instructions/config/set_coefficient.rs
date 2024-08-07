@@ -4,7 +4,7 @@ use crate::state::{Coefficient, Master};
 
 use crate::ID;
 
-pub fn set_coefficient(ctx: Context<SetCoefficient>, key: Pubkey, value: u64) -> Result<()> {
+pub fn set_coefficient(ctx: Context<SetCoefficient>, key: String, value: u64) -> Result<()> {
     let coefficient = &mut ctx.accounts.coefficient;
 
     coefficient.value = value;
@@ -14,7 +14,7 @@ pub fn set_coefficient(ctx: Context<SetCoefficient>, key: Pubkey, value: u64) ->
 }
 
 #[derive(Accounts)]
-#[instruction(key: Pubkey)]
+#[instruction(key: String)]
 pub struct SetCoefficient<'info> {
     #[account(
         mut,

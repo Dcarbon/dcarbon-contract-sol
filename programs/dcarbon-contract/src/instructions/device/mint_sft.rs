@@ -15,9 +15,8 @@ pub struct MintSftArgs {
     project_id: u16,
     device_id: u16,
     nonce: u16,
-    // total amount
     create_mint_data_vec: Vec<u8>,
-    mint_data_vec: Vec<u8>,
+    total_amount: u64,
 }
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
@@ -36,7 +35,7 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
     let metadata = &ctx.accounts.metadata;
     let authority = &ctx.accounts.authority;
     let device_status = &mut ctx.accounts.device_status;
-    // let contract_config = &ctx.accounts.contract_config;
+    let contract_config = &ctx.accounts.contract_config;
     let token_metadata_program = &ctx.accounts.token_metadata_program;
     let governance = &mut ctx.accounts.governance;
     let owner_governance = &mut ctx.accounts.owner_governance;
@@ -54,7 +53,8 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
     // check time
     let clock = Clock::get()?;
     let current_timestamp = clock.unix_timestamp;
-    if current_timestamp < device_status.last_mint_time + 86400 {
+    let time = 360; // 86400 = 1 day
+    if current_timestamp < device_status.last_mint_time + time {
         return Err(DCarbonError::NotMintTime.into());
     }
 
@@ -91,8 +91,15 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
         .create_args(create_data)
         .invoke_signed(&[seeds_signer])?;
 
+    let minting_fee = (mint_sft_args.total_amount as f64 * contract_config.minting_fee) as u64 / 10;
+
+    let minting_amount = mint_sft_args.total_amount - minting_fee;
+
     // mint for owner
-    let mint_data = MintArgs::try_from_slice(&mint_sft_args.mint_data_vec).unwrap();
+    let mint_data = MintArgs::V1 {
+        amount: minting_amount,
+        authorization_data: None,
+    };
 
     MintCpiBuilder::new(token_metadata_program)
         .token(&ctx.accounts.owner_ata)
@@ -114,25 +121,22 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
         .invoke_signed(&[seeds_signer])?;
 
     // increase fee amount
-    match &mint_data {
-        MintArgs::V1 { amount, .. } => {
-            // let total_amount = amount / ((10u64 - contract_config.minting_fee) / 10);
+    let claim = &mut ctx.accounts.claim;
+    claim.mint = mint.key();
 
-            let claim = &mut ctx.accounts.claim;
-            claim.mint = mint.key();
-            // hard code
-            claim.amount = 1;
-            claim.project_id = mint_sft_args.project_id;
+    // hard code
+    claim.amount += minting_fee;
+    claim.project_id = mint_sft_args.project_id;
 
-            // increase dCarbon
-            if governance.amount > 0 && governance.amount >= *amount {
-                governance.amount -= amount;
-                owner_governance.amount += amount;
-            }
+    let governance_amount = (mint_sft_args.total_amount as f64 * contract_config.rate) as u64 / 10;
 
-            msg!("mintinfo_{}_{}_{}_{}_{}_{}", mint_sft_args.project_id, mint_sft_args.device_id, device_status.nonce, amount, claim.amount, amount);
-        }
-    };
+    // increase dCarbon
+    if governance.amount > 0 && governance.amount >= governance_amount {
+        governance.amount -= governance_amount;
+        owner_governance.amount += governance_amount;
+    }
+
+    msg!("mintinfo_{}_{}_{}_{}_{}_{}", mint_sft_args.project_id, mint_sft_args.device_id, device_status.nonce, minting_amount, minting_fee, governance_amount);
 
 
     // increase
@@ -173,13 +177,13 @@ pub struct MintSft<'info> {
     )]
     pub governance: Account<'info, Governance>,
 
-    // #[account(
-    //     mut,
-    //     seeds = [ContractConfig::PREFIX_SEED],
-    //     bump
-    // )]
-    // /// CHECK:
-    // pub contract_config: AccountInfo<'info>,
+    #[account(
+        seeds = [ContractConfig::PREFIX_SEED],
+        bump,
+        owner = ID,
+    )]
+    /// CHECK:
+    pub contract_config: Account<'info, ContractConfig>,
 
     #[account(
         init,

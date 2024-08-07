@@ -12,6 +12,7 @@ pub fn init_config(
     let mint = &ctx.accounts.mint;
     let governance = &mut ctx.accounts.governance;
 
+    // amount without decimal
     governance.amount = config_args.governance_amount;
 
     contract_config.assign(config_args, mint.key())
@@ -57,7 +58,7 @@ pub struct InitConfig<'info> {
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ConfigArgs {
-    pub minting_fee: u64,
-    pub rate: u64,
+    pub minting_fee: f64,
+    pub rate: f64,
     pub governance_amount: u64,
 }
