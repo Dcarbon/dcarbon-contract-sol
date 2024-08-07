@@ -8,7 +8,7 @@ use spl_token::solana_program::program::{invoke, invoke_signed};
 
 use crate::error::DCarbonError;
 use crate::ID;
-use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo};
+use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo, TokenListingStatus};
 use crate::utils::assert_keys_equal;
 
 pub fn buy<'c: 'info, 'info>(
@@ -24,9 +24,10 @@ pub fn buy<'c: 'info, 'info>(
     let mint = &ctx.accounts.mint;
     let token_owner = &ctx.accounts.token_owner;
     let system_program = &ctx.accounts.system_program;
+    let token_listing_status = &mut ctx.accounts.token_listing_status;
 
     // check have enough amount
-    if token_listing_info.amount < amount {
+    if token_listing_status.remaining < amount {
         return Err(DCarbonError::NotEnoughAmount.into());
     }
 
@@ -131,10 +132,12 @@ pub fn buy<'c: 'info, 'info>(
     )?;
 
     // decrease token_listing_info
-    token_listing_info.amount -= amount;
+    token_listing_status.remaining -= amount;
 
     // close account when amount equal 0
-
+    if token_listing_status.remaining == 0.0 {
+        token_listing_status.out_of_token = true
+    }
     Ok(())
 }
 
@@ -157,6 +160,14 @@ pub struct Buy<'info> {
         owner = ID
     )]
     pub token_listing_info: Account<'info, TokenListingInfo>,
+
+    #[account(
+        mut,
+        seeds = [token_listing_info.key().as_ref(), TokenListingStatus::PREFIX_SEED],
+        bump,
+        owner = ID
+    )]
+    pub token_listing_status: Account<'info, TokenListingStatus>,
 
     #[account(
         mut,

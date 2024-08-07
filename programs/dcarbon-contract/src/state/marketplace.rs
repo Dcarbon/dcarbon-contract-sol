@@ -14,6 +14,18 @@ pub struct TokenListingInfo {
 
 #[account]
 #[derive(Debug, InitSpace)]
+pub struct TokenListingStatus {
+    pub total_amount: f64,
+    pub remaining: f64,
+    pub out_of_token: bool,
+}
+
+impl TokenListingStatus {
+    pub const PREFIX_SEED: &'static [u8] = b"token_listing_status";
+}
+
+#[account]
+#[derive(Debug, InitSpace)]
 pub struct MarketplaceCounter {
     pub nonce: u32,
 }
