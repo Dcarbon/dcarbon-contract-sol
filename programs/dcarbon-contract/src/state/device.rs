@@ -22,6 +22,10 @@ pub struct Device {
 impl Device {
     pub const PREFIX_SEED: &'static [u8] = b"device";
 
+    pub fn deserialize<'info>(x: &'info AccountInfo<'info>) -> Account<'info, Self> {
+        Account::try_from_unchecked(x).unwrap()
+    }
+
     // check device id length
     fn validate(&self, register_device_args: RegisterDeviceArgs) -> Result<()> {
         // check project_id

@@ -46,3 +46,10 @@ export const createAccount = async ({
 
   console.log(`Create account ${newAccountKeypair.publicKey} with ${lamports} lamports: ${sig}`);
 };
+
+export function u16ToBytes(value: number): Uint8Array {
+  const buffer = new ArrayBuffer(2); // u16 cần 2 bytes
+  const view = new DataView(buffer);
+  view.setUint16(0, value, true); // true để lưu theo Little Endian, false để lưu theo Big Endian
+  return new Uint8Array(buffer);
+}

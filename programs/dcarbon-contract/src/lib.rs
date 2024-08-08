@@ -76,7 +76,11 @@ pub mod dcarbon_contract {
         instructions::set_active(ctx, project_id, device_id)
     }
 
-    pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_message_args: VerifyMessageArgs) -> Result<()> {
+    pub fn mint_sft<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, MintSft<'info>>,
+        mint_sft_args: MintSftArgs,
+        verify_message_args: VerifyMessageArgs,
+    ) -> Result<()> {
         instructions::mint_sft(ctx, mint_sft_args, verify_message_args)
     }
 

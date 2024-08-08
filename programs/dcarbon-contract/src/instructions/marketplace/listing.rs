@@ -4,7 +4,7 @@ use spl_token::instruction::approve_checked;
 use spl_token::solana_program::program::invoke;
 
 use crate::error::DCarbonError;
-use crate::state::{MARKETPLACE_PREFIX_SEED, MarketplaceCounter, TokenListingInfo};
+use crate::state::{MARKETPLACE_PREFIX_SEED, MarketplaceCounter, TokenListingInfo, TokenListingStatus};
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ListingArgs {
@@ -23,6 +23,7 @@ pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
     let signer = &ctx.accounts.signer;
     let token_listing_info = &mut ctx.accounts.token_listing_info;
     let marketplace_counter = &mut ctx.accounts.marketplace_counter;
+    let token_listing_status = &mut ctx.accounts.token_listing_status;
 
     if marketplace_counter.nonce != listing_args.nonce {
         return Err(DCarbonError::InvalidNonce.into());
@@ -36,7 +37,7 @@ pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
         signer.key,
         &[],
         (listing_args.amount * 10f64.powf(mint.decimals as f64)) as u64,
-        mint.decimals
+        mint.decimals,
     )?;
 
     invoke(
@@ -56,7 +57,13 @@ pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
     token_listing_info.project_id = listing_args.project_id;
     token_listing_info.currency = listing_args.currency;
 
+    token_listing_status.total_amount = listing_args.amount;
+    token_listing_status.remaining = listing_args.amount;
+    token_listing_status.out_of_token = false;
+
     marketplace_counter.nonce += 1;
+
+    msg!("Nonce: {}", marketplace_counter.nonce);
     Ok(())
 }
 
@@ -80,6 +87,15 @@ pub struct Listing<'info> {
         bump,
     )]
     pub token_listing_info: Account<'info, TokenListingInfo>,
+
+    #[account(
+        init_if_needed,
+        payer = signer,
+        space = 8 + TokenListingStatus::INIT_SPACE,
+        seeds = [token_listing_info.key().as_ref(), TokenListingStatus::PREFIX_SEED],
+        bump,
+    )]
+    pub token_listing_status: Account<'info, TokenListingStatus>,
 
     #[account(
         init_if_needed,

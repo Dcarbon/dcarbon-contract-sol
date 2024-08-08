@@ -6,7 +6,8 @@ use mpl_token_metadata::types::{CreateArgs, MintArgs};
 
 use crate::*;
 use crate::error::DCarbonError;
-use crate::state::{Claim, ContractConfig, Device, DeviceStatus, Governance};
+use crate::state::{Claim, ContractConfig, Device, DeviceLimit, DeviceStatus, Governance};
+use crate::utils::assert_keys_equal;
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct MintSftArgs {
@@ -25,7 +26,11 @@ pub struct VerifyMessageArgs {
     recovery_id: u8,
 }
 
-pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_message_args: VerifyMessageArgs) -> Result<()> {
+pub fn mint_sft<'c: 'info, 'info>(
+    ctx: Context<'_, '_, 'c, 'info, MintSft<'info>>,
+    mint_sft_args: MintSftArgs,
+    verify_message_args: VerifyMessageArgs,
+) -> Result<()> {
     let mint = &ctx.accounts.mint;
     let signer = &ctx.accounts.signer;
     let token_program = &ctx.accounts.token_program;
@@ -37,6 +42,7 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
     let token_metadata_program = &ctx.accounts.token_metadata_program;
     let governance = &mut ctx.accounts.governance;
     let owner_governance = &mut ctx.accounts.owner_governance;
+    let device_owner = &ctx.accounts.device_owner;
 
     // check is active
     if !device_status.is_active {
@@ -56,9 +62,24 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
         return Err(DCarbonError::NotMintTime.into());
     }
 
-    // check limit, after
-    // let mut amount = mint_sft_args.total_amount;
-    // if amount > contract_config.minting_limits[]
+    // check limit
+    let list_remaining_accounts = &mut ctx.remaining_accounts.iter();
+    let device = next_account_info(list_remaining_accounts)?;
+    let device_data: Account<Device> = Account::try_from(device)?;
+
+    // check token_owner, minter
+    assert_keys_equal(signer.key, &device_data.minter)?;
+
+    assert_keys_equal(device_owner.key, &device_data.owner)?;
+
+    let mut amount = mint_sft_args.total_amount;
+    if let Some(limit) = find_limit(&contract_config.minting_limits, device_data.device_type) {
+        if amount > limit {
+            amount = limit;
+        }
+    } else {
+        println!("Device type {} not found", device_data.device_type);
+    }
 
     // verify signature
     // Get what should be the Secp256k1Program instruction
@@ -96,9 +117,9 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
     {
         match decimals {
             Some(decimals) => {
-                let minting_fee = mint_sft_args.total_amount * contract_config.minting_fee;
+                let minting_fee = amount * contract_config.minting_fee;
 
-                let minting_amount = mint_sft_args.total_amount - minting_fee;
+                let minting_amount = amount - minting_fee;
 
                 // mint for owner
                 let mint_data = MintArgs::V1 {
@@ -108,7 +129,7 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
 
                 MintCpiBuilder::new(token_metadata_program)
                     .token(&ctx.accounts.owner_ata)
-                    .token_owner(Some(&ctx.accounts.device_owner))
+                    .token_owner(Some(device_owner))
                     .metadata(metadata)
                     .master_edition(None)
                     .token_record(None)
@@ -131,7 +152,7 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
                 claim.amount += minting_fee;
                 claim.project_id = mint_sft_args.project_id;
 
-                let governance_amount = mint_sft_args.total_amount as f64 * contract_config.rate;
+                let governance_amount = amount as f64 * contract_config.rate;
 
                 // increase dCarbon
                 if governance.amount > 0.0 && governance.amount >= governance_amount {
@@ -150,6 +171,12 @@ pub fn mint_sft(ctx: Context<MintSft>, mint_sft_args: MintSftArgs, verify_messag
     }
 
     Ok(())
+}
+
+fn find_limit(device_limits: &Vec<DeviceLimit>, target_device_type: u16) -> Option<f64> {
+    device_limits.iter()
+        .find(|&device_limit| device_limit.device_type == target_device_type)
+        .map(|device_limit| device_limit.limit)
 }
 
 #[derive(Accounts)]
@@ -203,9 +230,6 @@ pub struct MintSft<'info> {
     #[account(mut)]
     /// CHECK:
     pub owner_ata: AccountInfo<'info>,
-
-    // /// CHECK:
-    // pub device: AccountInfo<'info>,
 
     #[account(
         mut,
