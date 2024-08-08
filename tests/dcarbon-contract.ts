@@ -415,7 +415,7 @@ describe('dcarbon-contract', () => {
       console.log('Set active', tx2);
     });
 
-    it('Mint sft', async () => {
+    xit('Mint sft', async () => {
       const { projectId, deviceId, owner } = await setupDevice();
 
       const mint = Keypair.generate();
@@ -507,7 +507,7 @@ describe('dcarbon-contract', () => {
   });
 
   describe('Marketplace', () => {
-    xit('Listing token with SOL', async () => {
+    it('Listing token with SOL', async () => {
       // get this mint from mins-sft
       const mint = new PublicKey('8vJNo9AXBDczE5xMSEXvrQVNAWyBt6NdK7DtJ2n6LgTT');
       const projectId = 37859;

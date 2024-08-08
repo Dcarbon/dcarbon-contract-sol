@@ -5,6 +5,7 @@ use spl_token::solana_program::program::invoke;
 
 use crate::error::DCarbonError;
 use crate::state::{MARKETPLACE_PREFIX_SEED, MarketplaceCounter, TokenListingInfo, TokenListingStatus};
+use crate::ID;
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ListingArgs {
@@ -45,7 +46,7 @@ pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
         &[token_program.clone(),
             source_ata.clone(),
             mint.to_account_info(),
-            delegate.clone(),
+            delegate.to_account_info(),
             signer.to_account_info(),
         ],
     )?;
@@ -80,39 +81,35 @@ pub struct Listing<'info> {
     pub source_ata: AccountInfo<'info>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = signer,
         space = 8 + TokenListingInfo::INIT_SPACE,
         seeds = [MARKETPLACE_PREFIX_SEED, mint.key().as_ref(), signer.key().as_ref(), & listing_args.nonce.to_le_bytes()],
         bump,
     )]
-    pub token_listing_info: Account<'info, TokenListingInfo>,
+    pub token_listing_info: Box<Account<'info, TokenListingInfo>>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = signer,
         space = 8 + TokenListingStatus::INIT_SPACE,
         seeds = [token_listing_info.key().as_ref(), TokenListingStatus::PREFIX_SEED],
         bump,
     )]
-    pub token_listing_status: Account<'info, TokenListingStatus>,
+    pub token_listing_status: Box<Account<'info, TokenListingStatus>>,
 
     #[account(
-        init_if_needed,
-        payer = signer,
-        space = 0,
         seeds = [MARKETPLACE_PREFIX_SEED, b"delegate"],
-        bump
+        bump,
+        owner = ID
     )]
     /// CHECK:
     pub marketplace_delegate: AccountInfo<'info>,
 
     #[account(
-        init_if_needed,
-        payer = signer,
-        space = 8 + MarketplaceCounter::INIT_SPACE,
         seeds = [MARKETPLACE_PREFIX_SEED, MarketplaceCounter::PREFIX_SEED],
-        bump
+        bump,
+        owner = ID
     )]
     pub marketplace_counter: Account<'info, MarketplaceCounter>,
 
