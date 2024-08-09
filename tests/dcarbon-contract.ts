@@ -423,10 +423,10 @@ describe('dcarbon-contract', () => {
 
     xit('Mint sft', async () => {
       const { projectId, deviceId, owner } = await setupDevice();
-
+      console.log('ProjectId: ', projectId);
       const mint = Keypair.generate();
 
-      console.log(mint.publicKey.toString());
+      console.log('Mint: ', mint.publicKey.toString());
 
       const [metadata] = PublicKey.findProgramAddressSync(
         [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
@@ -517,14 +517,16 @@ describe('dcarbon-contract', () => {
 
     xit('Listing token with SOL', async () => {
       // get this mint from mins-sft
-      const mint = new PublicKey('8vJNo9AXBDczE5xMSEXvrQVNAWyBt6NdK7DtJ2n6LgTT');
-      const projectId = 37859;
+      const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
+      const projectId = 56357;
       const sourceAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
 
       const [marketplaceCounter] = PublicKey.findProgramAddressSync(
         [Buffer.from('marketplace'), Buffer.from('counter')],
         program.programId,
       );
+
+      console.log(marketplaceCounter);
 
       const marketplaceCounterData = await program.account.marketplaceCounter.fetch(marketplaceCounter);
 
@@ -632,7 +634,7 @@ describe('dcarbon-contract', () => {
       console.log('Sig: ', sig);
     });
 
-    it('Buying token with token', async () => {
+    xit('Buying token with token', async () => {
       const buyer = Keypair.generate();
       const mint = new PublicKey('6CpXvu18MecVmtVJi3RWwQ9x5F9dh8UEPemvTsdsZpxC');
       const token_owner = upgradableAuthority.publicKey;
@@ -719,6 +721,24 @@ describe('dcarbon-contract', () => {
       });
 
       console.log('Sig: ', sig);
+    });
+
+    it('Cancel listing', async () => {
+      const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
+      const signer = upgradableAuthority.publicKey;
+      const nonce = 4;
+
+      const tx = await program.methods
+        .cancelListing(nonce)
+        .accounts({
+          signer,
+          mint,
+        })
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Txn: ', tx);
     });
   });
 
