@@ -23,7 +23,13 @@ import { expect } from 'chai';
 import BN from 'bn.js';
 import { prepareParams } from '../src/verify';
 import { ethers } from 'ethers';
-import { createAssociatedTokenAccountInstruction, getAssociatedTokenAddressSync } from '@solana/spl-token';
+import {
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddressSync,
+  getOrCreateAssociatedTokenAccount,
+  transferChecked,
+} from '@solana/spl-token';
+import * as bs58 from 'bs58';
 
 dotenv.config();
 
@@ -507,11 +513,13 @@ describe('dcarbon-contract', () => {
   });
 
   describe('Marketplace', () => {
-    it('Listing token with SOL', async () => {
+    const USDC = new PublicKey('6QLnQwoEzXNgrafQr3YNJtEsr4JuaY3ifNM4Lrs55hcc');
+
+    xit('Listing token with SOL', async () => {
       // get this mint from mins-sft
       const mint = new PublicKey('8vJNo9AXBDczE5xMSEXvrQVNAWyBt6NdK7DtJ2n6LgTT');
       const projectId = 37859;
-      const soureAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
+      const sourceAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
 
       const [marketplaceCounter] = PublicKey.findProgramAddressSync(
         [Buffer.from('marketplace'), Buffer.from('counter')],
@@ -533,7 +541,44 @@ describe('dcarbon-contract', () => {
         .accounts({
           signer: upgradableAuthority.publicKey,
           mint: mint,
-          sourceAta: soureAta,
+          sourceAta: sourceAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Tx: ', tx);
+    });
+
+    xit('Listing token with token', async () => {
+      // get this mint from mins-sft
+      const mint = new PublicKey('6CpXvu18MecVmtVJi3RWwQ9x5F9dh8UEPemvTsdsZpxC');
+      const projectId = 8030;
+      const sourceAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
+
+      const [marketplaceCounter] = PublicKey.findProgramAddressSync(
+        [Buffer.from('marketplace'), Buffer.from('counter')],
+        program.programId,
+      );
+
+      const marketplaceCounterData = await program.account.marketplaceCounter.fetch(marketplaceCounter);
+
+      console.log(marketplaceCounterData.nonce);
+      const listingArgs: ListingArgs = {
+        amount: 10,
+        price: 0.1,
+        projectId: projectId,
+        nonce: marketplaceCounterData.nonce,
+        currency: USDC,
+      };
+
+      const tx = await program.methods
+        .listing(listingArgs)
+        .accounts({
+          signer: upgradableAuthority.publicKey,
+          mint: mint,
+          sourceAta: sourceAta,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({
@@ -572,6 +617,95 @@ describe('dcarbon-contract', () => {
           tokenOwner: token_owner,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
+        .instruction();
+
+      const tx = new Transaction().add(createAtaIns).add(buyIns);
+      tx.feePayer = buyer.publicKey;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+      tx.partialSign(buyer);
+
+      const sig = await connection.sendTransaction(tx, [buyer], {
+        skipPreflight: true,
+      });
+
+      console.log('Sig: ', sig);
+    });
+
+    it('Buying token with token', async () => {
+      const buyer = Keypair.generate();
+      const mint = new PublicKey('6CpXvu18MecVmtVJi3RWwQ9x5F9dh8UEPemvTsdsZpxC');
+      const token_owner = upgradableAuthority.publicKey;
+
+      await createAccount({
+        provider: anchorProvider,
+        newAccountKeypair: buyer,
+        lamports: LAMPORTS_PER_SOL / 10,
+      });
+      // const sourceAtaToken = getAssociatedTokenAddressSync(USDC, buyer.publicKey);
+      const destinationAtaToken = getAssociatedTokenAddressSync(USDC, token_owner);
+
+      const payer = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY));
+      console.log('Payer: ', payer.publicKey);
+
+      const sourceAtaToken = (await getOrCreateAssociatedTokenAccount(connection, payer, USDC, buyer.publicKey))
+        .address;
+
+      const sigTransfer = await transferChecked(
+        connection,
+        payer,
+        destinationAtaToken,
+        USDC,
+        sourceAtaToken,
+        upgradableAuthority.publicKey,
+        10 * 10 ** 9,
+        9,
+        [],
+        { skipPreflight: true },
+      );
+
+      console.log('Transfer USDC: ', sigTransfer);
+
+      const tokenListingInfo = new PublicKey('BRZF19M2JPy8CPrcP9zEbXkqD5jq32ymHFeJQeJuxXrZ');
+
+      const sourceAta = getAssociatedTokenAddressSync(mint, token_owner);
+      const toAta = getAssociatedTokenAddressSync(mint, buyer.publicKey);
+
+      const createAtaIns = createAssociatedTokenAccountInstruction(buyer.publicKey, toAta, buyer.publicKey, mint);
+
+      const buyIns = await program.methods
+        .buy(3)
+        .accounts({
+          signer: buyer.publicKey,
+          mint: mint,
+          sourceAta: sourceAta,
+          toAta: toAta,
+          tokenListingInfo: tokenListingInfo,
+          tokenOwner: token_owner,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .remainingAccounts([
+          {
+            pubkey: TOKEN_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: USDC,
+            isWritable: false,
+            isSigner: false,
+          },
+          {
+            pubkey: sourceAtaToken,
+            isSigner: false,
+            isWritable: true,
+          },
+          {
+            pubkey: destinationAtaToken,
+            isSigner: false,
+            isWritable: true,
+          },
+        ])
         .instruction();
 
       const tx = new Transaction().add(createAtaIns).add(buyIns);

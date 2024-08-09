@@ -4,8 +4,8 @@ use spl_token::instruction::approve_checked;
 use spl_token::solana_program::program::invoke;
 
 use crate::error::DCarbonError;
-use crate::state::{MARKETPLACE_PREFIX_SEED, MarketplaceCounter, TokenListingInfo, TokenListingStatus};
 use crate::ID;
+use crate::state::{MARKETPLACE_PREFIX_SEED, MarketplaceCounter, TokenListingInfo, TokenListingStatus};
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ListingArgs {
@@ -57,6 +57,7 @@ pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
     token_listing_info.mint = mint.key();
     token_listing_info.project_id = listing_args.project_id;
     token_listing_info.currency = listing_args.currency;
+    token_listing_info.nonce = marketplace_counter.nonce;
 
     token_listing_status.total_amount = listing_args.amount;
     token_listing_status.remaining = listing_args.amount;
@@ -107,6 +108,7 @@ pub struct Listing<'info> {
     pub marketplace_delegate: AccountInfo<'info>,
 
     #[account(
+        mut,
         seeds = [MARKETPLACE_PREFIX_SEED, MarketplaceCounter::PREFIX_SEED],
         bump,
         owner = ID
