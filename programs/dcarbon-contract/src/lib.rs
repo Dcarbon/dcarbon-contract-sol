@@ -98,4 +98,8 @@ pub mod dcarbon_contract {
     ) -> Result<()> {
         instructions::buy(ctx, amount)
     }
+
+    pub fn cancel_listing(ctx: Context<CancelListing>, nonce: u32) -> Result<()> {
+        instructions::cancel_listing(ctx, nonce)
+    }
 }
