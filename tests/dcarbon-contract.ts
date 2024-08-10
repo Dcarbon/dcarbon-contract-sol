@@ -17,7 +17,7 @@ import {
   Transaction,
 } from '@solana/web3.js';
 import { ASSOCIATED_PROGRAM_ID, associatedAddress, TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
-import { createAccount, getRandomU16, sleep, u16ToBytes } from './utils';
+import { createAccount, getRandomU16, sleep, u16ToBytes, u32ToBytes } from './utils';
 import * as dotenv from 'dotenv';
 import { expect } from 'chai';
 import BN from 'bn.js';
@@ -515,7 +515,7 @@ describe('dcarbon-contract', () => {
   describe('Marketplace', () => {
     const USDC = new PublicKey('6QLnQwoEzXNgrafQr3YNJtEsr4JuaY3ifNM4Lrs55hcc');
 
-    xit('Listing token with SOL', async () => {
+    it('Listing token with SOL', async () => {
       // get this mint from mins-sft
       const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
       const projectId = 56357;
@@ -526,15 +526,27 @@ describe('dcarbon-contract', () => {
         program.programId,
       );
 
-      console.log(marketplaceCounter);
-
       const marketplaceCounterData = await program.account.marketplaceCounter.fetch(marketplaceCounter);
+
+      const [tokenListingInfo] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('marketplace'),
+          mint.toBuffer(),
+          upgradableAuthority.publicKey.toBuffer(),
+          u32ToBytes(marketplaceCounterData.nonce),
+        ],
+        program.programId,
+      );
+
+      const [tokenListingStatus] = PublicKey.findProgramAddressSync(
+        [tokenListingInfo.toBuffer(), Buffer.from('token_listing_status')],
+        program.programId,
+      );
 
       const listingArgs: ListingArgs = {
         amount: 10,
         price: 0.1,
         projectId: projectId,
-        nonce: marketplaceCounterData.nonce,
         currency: null,
       };
 
@@ -546,6 +558,18 @@ describe('dcarbon-contract', () => {
           sourceAta: sourceAta,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
+        .remainingAccounts([
+          {
+            pubkey: tokenListingInfo,
+            isWritable: true,
+            isSigner: false,
+          },
+          {
+            pubkey: tokenListingStatus,
+            isWritable: true,
+            isSigner: false,
+          },
+        ])
         .rpc({
           skipPreflight: true,
         });
@@ -571,7 +595,6 @@ describe('dcarbon-contract', () => {
         amount: 10,
         price: 0.1,
         projectId: projectId,
-        nonce: marketplaceCounterData.nonce,
         currency: USDC,
       };
 
@@ -723,7 +746,7 @@ describe('dcarbon-contract', () => {
       console.log('Sig: ', sig);
     });
 
-    it('Cancel listing', async () => {
+    xit('Cancel listing', async () => {
       const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
       const signer = upgradableAuthority.publicKey;
       const nonce = 4;

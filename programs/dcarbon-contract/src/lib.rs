@@ -88,7 +88,10 @@ pub mod dcarbon_contract {
         instructions::swap_sft(ctx, burn_data_vec, mint_data_vec)
     }
 
-    pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
+    pub fn listing<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, Listing<'info>>,
+        listing_args: ListingArgs
+    ) -> Result<()> {
         instructions::listing(ctx, listing_args)
     }
 
