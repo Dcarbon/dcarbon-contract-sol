@@ -4,7 +4,7 @@ use spl_token::instruction::approve_checked;
 use spl_token::solana_program::program::invoke;
 
 use crate::ID;
-use crate::state::{MARKETPLACE_PREFIX_SEED, MarketplaceCounter, TokenListingInfo, TokenListingStatus};
+use crate::state::{MARKETPLACE_PREFIX_SEED, MarketplaceCounter, TokenListingInfo};
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ListingArgs {
@@ -28,7 +28,6 @@ pub fn listing<'c: 'info, 'info>(
 
     let list_remaining_accounts = &mut ctx.remaining_accounts.iter();
     let token_listing_info = next_account_info(list_remaining_accounts)?;
-    let token_listing_status = next_account_info(list_remaining_accounts)?;
 
     let approve_checked_ins = approve_checked(
         token_program.key,
@@ -61,14 +60,6 @@ pub fn listing<'c: 'info, 'info>(
         listing_args.clone(),
     )?;
 
-    TokenListingStatus::assign(
-        token_listing_status,
-        token_listing_info.clone(),
-        signer.to_account_info(),
-        system_program.to_account_info(),
-        listing_args.clone(),
-    )?;
-
     marketplace_counter.nonce += 1;
 
     msg!("Nonce: {}", marketplace_counter.nonce);
@@ -86,24 +77,6 @@ pub struct Listing<'info> {
     #[account(mut)]
     /// CHECK:
     pub source_ata: AccountInfo<'info>,
-
-    // #[account(
-    //     init,
-    //     payer = signer,
-    //     space = 8 + TokenListingInfo::INIT_SPACE,
-    //     seeds = [MARKETPLACE_PREFIX_SEED, mint.key().as_ref(), signer.key().as_ref(), & listing_args.nonce.to_le_bytes()],
-    //     bump,
-    // )]
-    // pub token_listing_info: Box<Account<'info, TokenListingInfo>>,
-
-    // #[account(
-    //     init,
-    //     payer = signer,
-    //     space = 8 + TokenListingStatus::INIT_SPACE,
-    //     seeds = [token_listing_info.key().as_ref(), TokenListingStatus::PREFIX_SEED],
-    //     bump,
-    // )]
-    // pub token_listing_status: Box<Account<'info, TokenListingStatus>>,
 
     #[account(
         seeds = [MARKETPLACE_PREFIX_SEED, b"delegate"],

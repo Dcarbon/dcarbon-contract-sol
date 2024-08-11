@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 
-use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo, TokenListingStatus};
+use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo};
 
 pub fn cancel_listing(_ctx: Context<CancelListing>, _nonce: u32) -> Result<()> {
     Ok(())
@@ -25,12 +25,4 @@ pub struct CancelListing<'info> {
         close = signer
     )]
     pub token_listing_info: Box<Account<'info, TokenListingInfo>>,
-
-    #[account(
-        mut,
-        seeds = [token_listing_info.key().as_ref(), TokenListingStatus::PREFIX_SEED],
-        bump,
-        close = signer
-    )]
-    pub token_listing_status: Box<Account<'info, TokenListingStatus>>,
 }

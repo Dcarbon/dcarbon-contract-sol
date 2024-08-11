@@ -3,7 +3,9 @@ import { AnchorProvider, IdlTypes, Program } from '@coral-xyz/anchor';
 import { DcarbonContract } from '../target/types/dcarbon_contract';
 import {
   CreateArgsArgs,
+  DataV2Args,
   getCreateArgsSerializer,
+  getDataV2Serializer,
   MPL_TOKEN_METADATA_PROGRAM_ID,
   TokenStandard,
 } from '@metaplex-foundation/mpl-token-metadata';
@@ -24,6 +26,7 @@ import BN from 'bn.js';
 import { prepareParams } from '../src/verify';
 import { ethers } from 'ethers';
 import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   getAssociatedTokenAddressSync,
   getOrCreateAssociatedTokenAccount,
@@ -515,7 +518,7 @@ describe('dcarbon-contract', () => {
   describe('Marketplace', () => {
     const USDC = new PublicKey('6QLnQwoEzXNgrafQr3YNJtEsr4JuaY3ifNM4Lrs55hcc');
 
-    it('Listing token with SOL', async () => {
+    xit('Listing token with SOL', async () => {
       // get this mint from mins-sft
       const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
       const projectId = 56357;
@@ -535,11 +538,6 @@ describe('dcarbon-contract', () => {
           upgradableAuthority.publicKey.toBuffer(),
           u32ToBytes(marketplaceCounterData.nonce),
         ],
-        program.programId,
-      );
-
-      const [tokenListingStatus] = PublicKey.findProgramAddressSync(
-        [tokenListingInfo.toBuffer(), Buffer.from('token_listing_status')],
         program.programId,
       );
 
@@ -564,11 +562,6 @@ describe('dcarbon-contract', () => {
             isWritable: true,
             isSigner: false,
           },
-          {
-            pubkey: tokenListingStatus,
-            isWritable: true,
-            isSigner: false,
-          },
         ])
         .rpc({
           skipPreflight: true,
@@ -590,7 +583,16 @@ describe('dcarbon-contract', () => {
 
       const marketplaceCounterData = await program.account.marketplaceCounter.fetch(marketplaceCounter);
 
-      console.log(marketplaceCounterData.nonce);
+      const [tokenListingInfo] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('marketplace'),
+          mint.toBuffer(),
+          upgradableAuthority.publicKey.toBuffer(),
+          u32ToBytes(marketplaceCounterData.nonce),
+        ],
+        program.programId,
+      );
+
       const listingArgs: ListingArgs = {
         amount: 10,
         price: 0.1,
@@ -606,6 +608,13 @@ describe('dcarbon-contract', () => {
           sourceAta: sourceAta,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
+        .remainingAccounts([
+          {
+            pubkey: tokenListingInfo,
+            isWritable: true,
+            isSigner: false,
+          },
+        ])
         .rpc({
           skipPreflight: true,
         });
@@ -613,9 +622,9 @@ describe('dcarbon-contract', () => {
       console.log('Tx: ', tx);
     });
 
-    xit('Buying token with SOL', async () => {
+    it('Buying token with SOL', async () => {
       const buyer = Keypair.generate();
-      const mint = new PublicKey('8vJNo9AXBDczE5xMSEXvrQVNAWyBt6NdK7DtJ2n6LgTT');
+      const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
       const token_owner = upgradableAuthority.publicKey;
 
       await createAccount({
@@ -624,7 +633,7 @@ describe('dcarbon-contract', () => {
         lamports: LAMPORTS_PER_SOL / 10,
       });
 
-      const tokenListingInfo = new PublicKey('4Kd2xEr6VR6fxMAUfA6VpkWjtTBCxgGyXFourUwHvmwi');
+      const tokenListingInfo = new PublicKey('CoyaRchmX636aUexdxPZ1jidk2S2iRGCNv5brf42mR1P');
 
       const sourceAta = getAssociatedTokenAddressSync(mint, token_owner);
       const toAta = getAssociatedTokenAddressSync(mint, buyer.publicKey);
@@ -762,6 +771,64 @@ describe('dcarbon-contract', () => {
         });
 
       console.log('Txn: ', tx);
+    });
+
+    xit('Create collection', async () => {
+      const [collectionAuthority] = PublicKey.findProgramAddressSync(
+        [Buffer.from('update_authority')],
+        program.programId,
+      );
+
+      const mint = Keypair.generate();
+
+      const ata = getAssociatedTokenAddressSync(mint.publicKey, collectionAuthority, true);
+
+      const [metadataAccount] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata', 'utf8'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const [masterEditionAccount] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('metadata', 'utf8'),
+          TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+          mint.publicKey.toBuffer(),
+          Buffer.from('edition', 'utf8'),
+        ],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const metadata: DataV2Args = {
+        name: 'Dcarbon Collection',
+        symbol: 'DCC',
+        uri: 'https://arweave.net/eJX2Xi-wzkNh6zRXQsx9wEKTq3E6P5bdoZKvWQ3XHzE',
+        sellerFeeBasisPoints: 100,
+        creators: null,
+        collection: null,
+        uses: null,
+      };
+
+      const serialize = getDataV2Serializer();
+      const data = serialize.serialize(metadata);
+
+      const tx = await program.methods
+        .createCollection(Buffer.from(data))
+        .accounts({
+          creator: upgradableAuthority.publicKey,
+          collectionTokenAccount: ata,
+          metadata: metadataAccount,
+          masterEdition: masterEditionAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          mint: mint.publicKey,
+          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        })
+        .signers([mint])
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Create collection: ', tx);
     });
   });
 

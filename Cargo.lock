@@ -863,6 +863,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "mpl-token-metadata",
+ "spl-associated-token-account",
  "spl-token",
 ]
 

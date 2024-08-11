@@ -13,6 +13,14 @@ import {
   MINT_SIZE,
 } from '@solana/spl-token';
 import { TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
+import {
+  createSignerFromKeypair,
+  createUmi,
+  generateSigner,
+  percentAmount,
+  signerIdentity,
+} from '@metaplex-foundation/umi';
+import { createNft, mplTokenMetadata } from '@metaplex-foundation/mpl-token-metadata';
 
 dotenv.config();
 
@@ -42,8 +50,6 @@ const transferMasterRight = async () => {
 
   console.log('Sig: ', sig);
 };
-
-// transferMasterRight();
 
 const disableMint = async () => {
   const mint = Keypair.generate();
@@ -105,3 +111,19 @@ const delegateToken = async () => {
   console.log('Sig: ', sig);
 };
 delegateToken();
+
+const umi = createUmi().use(mplTokenMetadata());
+const keyPair = umi.eddsa.createKeypairFromSecretKey(bs58.decode(process.env.PRIVATE_KEY));
+const umiSigner = createSignerFromKeypair(umi, keyPair);
+umi.use(signerIdentity(umiSigner));
+const createMint = async () => {
+  const mint = generateSigner(umi);
+  await createNft(umi, {
+    mint,
+    name: 'My Fungible',
+    uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
+    sellerFeeBasisPoints: percentAmount(5.5),
+  }).sendAndConfirm(umi);
+};
+
+createMint();
