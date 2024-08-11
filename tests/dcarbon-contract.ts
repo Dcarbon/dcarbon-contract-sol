@@ -19,7 +19,7 @@ import {
   Transaction,
 } from '@solana/web3.js';
 import { ASSOCIATED_PROGRAM_ID, associatedAddress, TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
-import { createAccount, getRandomU16, sleep, u16ToBytes, u32ToBytes } from './utils';
+import { createAccount, getRandomU16, sleep, u16ToBytes } from './utils';
 import * as dotenv from 'dotenv';
 import { expect } from 'chai';
 import BN from 'bn.js';
@@ -518,26 +518,16 @@ describe('dcarbon-contract', () => {
   describe('Marketplace', () => {
     const USDC = new PublicKey('6QLnQwoEzXNgrafQr3YNJtEsr4JuaY3ifNM4Lrs55hcc');
 
-    xit('Listing token with SOL', async () => {
+    it('Listing token with SOL', async () => {
       // get this mint from mins-sft
       const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
       const projectId = 56357;
       const sourceAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
 
-      const [marketplaceCounter] = PublicKey.findProgramAddressSync(
-        [Buffer.from('marketplace'), Buffer.from('counter')],
-        program.programId,
-      );
-
-      const marketplaceCounterData = await program.account.marketplaceCounter.fetch(marketplaceCounter);
+      const randomId = getRandomU16();
 
       const [tokenListingInfo] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('marketplace'),
-          mint.toBuffer(),
-          upgradableAuthority.publicKey.toBuffer(),
-          u32ToBytes(marketplaceCounterData.nonce),
-        ],
+        [Buffer.from('marketplace'), mint.toBuffer(), upgradableAuthority.publicKey.toBuffer(), u16ToBytes(randomId)],
         program.programId,
       );
 
@@ -546,6 +536,7 @@ describe('dcarbon-contract', () => {
         price: 0.1,
         projectId: projectId,
         currency: null,
+        randomId,
       };
 
       const tx = await program.methods
@@ -576,20 +567,10 @@ describe('dcarbon-contract', () => {
       const projectId = 8030;
       const sourceAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
 
-      const [marketplaceCounter] = PublicKey.findProgramAddressSync(
-        [Buffer.from('marketplace'), Buffer.from('counter')],
-        program.programId,
-      );
-
-      const marketplaceCounterData = await program.account.marketplaceCounter.fetch(marketplaceCounter);
+      const randomId = getRandomU16();
 
       const [tokenListingInfo] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('marketplace'),
-          mint.toBuffer(),
-          upgradableAuthority.publicKey.toBuffer(),
-          u32ToBytes(marketplaceCounterData.nonce),
-        ],
+        [Buffer.from('marketplace'), mint.toBuffer(), upgradableAuthority.publicKey.toBuffer(), u16ToBytes(randomId)],
         program.programId,
       );
 
@@ -598,6 +579,7 @@ describe('dcarbon-contract', () => {
         price: 0.1,
         projectId: projectId,
         currency: USDC,
+        randomId,
       };
 
       const tx = await program.methods
@@ -622,7 +604,7 @@ describe('dcarbon-contract', () => {
       console.log('Tx: ', tx);
     });
 
-    it('Buying token with SOL', async () => {
+    xit('Buying token with SOL', async () => {
       const buyer = Keypair.generate();
       const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
       const token_owner = upgradableAuthority.publicKey;

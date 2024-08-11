@@ -13,13 +13,9 @@ import {
   MINT_SIZE,
 } from '@solana/spl-token';
 import { TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
-import {
-  createSignerFromKeypair,
-  createUmi,
-  generateSigner,
-  percentAmount,
-  signerIdentity,
-} from '@metaplex-foundation/umi';
+import { createSignerFromKeypair, generateSigner, percentAmount, signerIdentity } from '@metaplex-foundation/umi';
+import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
+
 import { createNft, mplTokenMetadata } from '@metaplex-foundation/mpl-token-metadata';
 
 dotenv.config();
@@ -112,7 +108,7 @@ const delegateToken = async () => {
 };
 delegateToken();
 
-const umi = createUmi().use(mplTokenMetadata());
+const umi = createUmi(process.env.DEV_RPC_ENDPOINT).use(mplTokenMetadata());
 const keyPair = umi.eddsa.createKeypairFromSecretKey(bs58.decode(process.env.PRIVATE_KEY));
 const umiSigner = createSignerFromKeypair(umi, keyPair);
 umi.use(signerIdentity(umiSigner));

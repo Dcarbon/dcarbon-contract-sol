@@ -42,7 +42,7 @@ impl TokenListingInfo {
             MARKETPLACE_PREFIX_SEED,
             mint.key.as_ref(),
             signer.key.as_ref(),
-            &nonce.to_le_bytes(),
+            &listing_args.random_id.to_le_bytes(),
         ];
 
         let (public_key, bump) = Pubkey::find_program_address(&seeds, &ID);
