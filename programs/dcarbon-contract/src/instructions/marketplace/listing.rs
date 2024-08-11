@@ -12,7 +12,10 @@ pub struct ListingArgs {
     pub price: f64,
     pub project_id: u16,
     pub currency: Option<Pubkey>,
+    pub random_id: u16,
 }
+
+
 
 pub fn listing<'c: 'info, 'info>(
     ctx: Context<'_, '_, 'c, 'info, Listing<'info>>,

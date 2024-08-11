@@ -102,8 +102,7 @@ const fetchAllTokenListingFromProject = async () => {
       program.programId,
     );
 
-    const tokenListingStatusData = await program.account.tokenListingStatus.fetch(tokenListingStatus);
-    console.log('Status: ', tokenListingStatusData);
+    console.log(tokenListingStatus);
   }
 };
 fetchAllTokenListingFromProject();
