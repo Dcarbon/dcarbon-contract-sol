@@ -1,4 +1,4 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, system_program::CreateAccount};
 use anchor_lang::solana_program;
 use solana_program::program_memory::sol_memcmp;
 use solana_program::pubkey::PUBKEY_BYTES;
@@ -93,4 +93,26 @@ pub fn check_secp256k1_data(data: &[u8], eth_address: &[u8], msg: &[u8], sig: &[
     }
 
     Ok(())
+}
+
+pub fn create_account<'info>(
+    system_program: AccountInfo<'info>,
+    from: AccountInfo<'info>,
+    to: AccountInfo<'info>,
+    seeds: &[&[u8]],
+    bump: u8,
+    space: u64,
+    owner: &Pubkey,
+) -> Result<()> {
+    let seeds_signer = &mut seeds.to_vec();
+    let binding = [bump];
+    seeds_signer.push(&binding);
+
+    // signer seeds must equal seeds of to address
+    anchor_lang::system_program::create_account(
+        CpiContext::new(system_program, CreateAccount { from, to }).with_signer(&[seeds_signer]),
+        Rent::get()?.minimum_balance(space.try_into().unwrap()),
+        space,
+        owner,
+    )
 }

@@ -52,7 +52,7 @@ impl Device {
 
 #[account]
 #[derive(Debug, InitSpace)]
-pub struct DeviceStatus {
+pub struct DeviceStatus { // 8 + 32 + 1 + 8
     pub device_key: Pubkey,
     pub is_active: bool,
     pub last_mint_time: i64,

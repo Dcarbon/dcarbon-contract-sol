@@ -40,7 +40,7 @@ export const createAccount = async ({
 
   const tx = new Transaction().add(createAccountIns).add(transferIns);
 
-  const sig = provider.sendAndConfirm(tx, [newAccountKeypair], {
+  const sig = await provider.sendAndConfirm(tx, [newAccountKeypair], {
     maxRetries: 20,
   });
 
@@ -51,5 +51,12 @@ export function u16ToBytes(value: number): Uint8Array {
   const buffer = new ArrayBuffer(2); // u16 cần 2 bytes
   const view = new DataView(buffer);
   view.setUint16(0, value, true); // true để lưu theo Little Endian, false để lưu theo Big Endian
+  return new Uint8Array(buffer);
+}
+
+export function u32ToBytes(value: number): Uint8Array {
+  const buffer = new ArrayBuffer(4); // u16 cần 2 bytes
+  const view = new DataView(buffer);
+  view.setUint32(0, value, true); // true để lưu theo Little Endian, false để lưu theo Big Endian
   return new Uint8Array(buffer);
 }

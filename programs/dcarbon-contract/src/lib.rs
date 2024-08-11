@@ -88,7 +88,10 @@ pub mod dcarbon_contract {
         instructions::swap_sft(ctx, burn_data_vec, mint_data_vec)
     }
 
-    pub fn listing(ctx: Context<Listing>, listing_args: ListingArgs) -> Result<()> {
+    pub fn listing<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, Listing<'info>>,
+        listing_args: ListingArgs,
+    ) -> Result<()> {
         instructions::listing(ctx, listing_args)
     }
 
@@ -101,5 +104,9 @@ pub mod dcarbon_contract {
 
     pub fn cancel_listing(ctx: Context<CancelListing>, nonce: u32) -> Result<()> {
         instructions::cancel_listing(ctx, nonce)
+    }
+
+    pub fn create_collection(ctx: Context<CreateCollection>, data: Vec<u8>) -> Result<()> {
+        instructions::create_collection(ctx, data)
     }
 }
