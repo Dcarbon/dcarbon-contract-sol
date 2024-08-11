@@ -858,10 +858,9 @@ describe('dcarbon-contract', () => {
     xit('Cancel listing', async () => {
       const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
       const signer = upgradableAuthority.publicKey;
-      const nonce = 4;
 
       const tx = await program.methods
-        .cancelListing(nonce)
+        .cancelListing()
         .accounts({
           signer,
           mint,

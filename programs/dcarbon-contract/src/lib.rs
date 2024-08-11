@@ -102,8 +102,8 @@ pub mod dcarbon_contract {
         instructions::buy(ctx, amount)
     }
 
-    pub fn cancel_listing(ctx: Context<CancelListing>, nonce: u32) -> Result<()> {
-        instructions::cancel_listing(ctx, nonce)
+    pub fn cancel_listing(ctx: Context<CancelListing>) -> Result<()> {
+        instructions::cancel_listing(ctx)
     }
 
     pub fn create_collection(ctx: Context<CreateCollection>, data: Vec<u8>) -> Result<()> {
@@ -120,6 +120,6 @@ pub mod dcarbon_contract {
         name: String,
         symbol: String,
     ) -> Result<()> {
-        instructions::mint_nft(ctx)
+        instructions::mint_nft(ctx, uri, name, symbol)
     }
 }

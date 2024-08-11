@@ -13,6 +13,9 @@ use mpl_token_metadata::types::DataV2;
 use crate::ID;
 use crate::instructions::BurningRecord;
 
+#[constant]
+pub const SEED: &str = "Collection";
+
 pub fn mint_nft(
     ctx: Context<MintNft>,
     uri: String,
@@ -135,14 +138,12 @@ pub struct MintNft<'info> {
     /// CHECK:
     #[account(
         mut,
-        address = find_metadata_account(& collection_mint.key()).0
     )]
     pub collection_metadata_account: UncheckedAccount<'info>,
 
     /// CHECK:
     #[account(
         mut,
-        address = find_master_edition_account(& collection_mint.key()).0
     )]
     pub collection_master_edition: UncheckedAccount<'info>,
 
@@ -158,14 +159,12 @@ pub struct MintNft<'info> {
     /// CHECK:
     #[account(
         mut,
-        address = find_metadata_account(& nft_mint.key()).0
     )]
     pub metadata_account: UncheckedAccount<'info>,
 
     /// CHECK:
     #[account(
         mut,
-        address = find_master_edition_account(& nft_mint.key()).0
     )]
     pub master_edition: UncheckedAccount<'info>,
 

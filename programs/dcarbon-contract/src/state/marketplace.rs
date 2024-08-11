@@ -15,6 +15,7 @@ pub struct TokenListingInfo {
     pub project_id: u16,
     pub currency: Option<Pubkey>,
     pub remaining: f64,
+    pub random_id: u16,
 }
 
 impl TokenListingInfo {
