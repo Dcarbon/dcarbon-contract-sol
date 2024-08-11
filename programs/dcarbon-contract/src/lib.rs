@@ -109,4 +109,12 @@ pub mod dcarbon_contract {
     pub fn create_collection(ctx: Context<CreateCollection>, data: Vec<u8>) -> Result<()> {
         instructions::create_collection(ctx, data)
     }
+
+    pub fn burn_sft(ctx: Context<BurnSft>, amount: f64) -> Result<()> {
+        instructions::burn_sft(ctx, amount)
+    }
+
+    pub fn mint_nft(ctx: Context<MintNft>) -> Result<()> {
+        instructions::mint_nft(ctx)
+    }
 }
