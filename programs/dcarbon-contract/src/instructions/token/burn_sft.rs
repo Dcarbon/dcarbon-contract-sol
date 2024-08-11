@@ -71,7 +71,7 @@ pub struct BurnSft<'info> {
         init_if_needed,
         payer = signer,
         space = 8 + BurningRecord::INIT_SPACE,
-        seeds = [BurningRecord::PREFIX_SEED, signer.key().as_ref(), mint_sft.key().as_ref()],
+        seeds = [BurningRecord::PREFIX_SEED, signer.key().as_ref()],
         bump
     )]
     pub burning_record: Account<'info, BurningRecord>,
@@ -96,8 +96,6 @@ pub struct BurnSft<'info> {
     /// CHECK:
     pub token_metadata_program: AccountInfo<'info>,
 
-    /// CHECK:
-    pub ata_program: AccountInfo<'info>,
 }
 
 #[account]

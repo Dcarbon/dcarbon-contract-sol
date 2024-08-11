@@ -518,7 +518,7 @@ describe('dcarbon-contract', () => {
   describe('Marketplace', () => {
     const USDC = new PublicKey('6QLnQwoEzXNgrafQr3YNJtEsr4JuaY3ifNM4Lrs55hcc');
 
-    it('Listing token with SOL', async () => {
+    xit('Listing token with SOL', async () => {
       // get this mint from mins-sft
       const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
       const projectId = 56357;
@@ -584,7 +584,11 @@ describe('dcarbon-contract', () => {
         delegateAmount: 10,
       };
 
-      const tx = await program.methods
+      const currencyAta = getAssociatedTokenAddressSync(USDC, upgradableAuthority.publicKey);
+
+      const checkAtaAccount = await connection.getAccountInfo(currencyAta);
+
+      const listingIns = await program.methods
         .listing(listingArgs)
         .accounts({
           signer: upgradableAuthority.publicKey,
@@ -599,11 +603,30 @@ describe('dcarbon-contract', () => {
             isSigner: false,
           },
         ])
-        .rpc({
-          skipPreflight: true,
-        });
+        .instruction();
 
-      console.log('Tx: ', tx);
+      const tx = new Transaction();
+
+      if (!checkAtaAccount) {
+        // add this to txn
+        const createAtaIns = createAssociatedTokenAccountInstruction(
+          upgradableAuthority.publicKey,
+          currencyAta,
+          upgradableAuthority.publicKey,
+          USDC,
+        );
+
+        tx.add(createAtaIns);
+      }
+
+      tx.add(listingIns);
+
+      tx.feePayer = upgradableAuthority.publicKey;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+      const sig = await anchorProvider.sendAndConfirm(tx, [], { skipPreflight: true });
+
+      console.log('Tx: ', sig);
     });
 
     xit('Buying token with SOL', async () => {
@@ -684,7 +707,7 @@ describe('dcarbon-contract', () => {
 
       console.log('Transfer USDC: ', sigTransfer);
 
-      const tokenListingInfo = new PublicKey('BRZF19M2JPy8CPrcP9zEbXkqD5jq32ymHFeJQeJuxXrZ');
+      const tokenListingInfo = new PublicKey('J6T1jPahnX5FCoAHbzHaCxPSx6qkiKhR6FqsKxvxNfqL');
 
       const sourceAta = getAssociatedTokenAddressSync(mint, token_owner);
       const toAta = getAssociatedTokenAddressSync(mint, buyer.publicKey);
@@ -710,6 +733,99 @@ describe('dcarbon-contract', () => {
           },
           {
             pubkey: USDC,
+            isWritable: false,
+            isSigner: false,
+          },
+          {
+            pubkey: sourceAtaToken,
+            isSigner: false,
+            isWritable: true,
+          },
+          {
+            pubkey: destinationAtaToken,
+            isSigner: false,
+            isWritable: true,
+          },
+        ])
+        .instruction();
+
+      const tx = new Transaction().add(createAtaIns).add(buyIns);
+      tx.feePayer = buyer.publicKey;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+      tx.partialSign(buyer);
+
+      const sig = await connection.sendTransaction(tx, [buyer], {
+        skipPreflight: true,
+      });
+
+      console.log('Sig: ', sig);
+    });
+
+    xit('Buying token with USDT', async () => {
+      const USDT = new PublicKey('AxuH66zrimRg9NVbvdL8kptHRNWqGx2cb5Dk23SwbaHz');
+      const buyer = Keypair.generate();
+      const mint = new PublicKey('38iVZfDeATuKHtxyw12zPUtosDVmZgemFwq7kn5hNj8x');
+      const token_owner = new PublicKey('HbHM8X9Eg8t7YsZ9dKRxVr9kXhunWEyUiNdCUBcHMhoB');
+
+      await createAccount({
+        provider: anchorProvider,
+        newAccountKeypair: buyer,
+        lamports: LAMPORTS_PER_SOL / 10,
+      });
+
+      // const sourceAtaToken = getAssociatedTokenAddressSync(USDC, buyer.publicKey);
+      const destinationAtaToken = getAssociatedTokenAddressSync(USDT, token_owner);
+
+      const testing = getAssociatedTokenAddressSync(USDT, upgradableAuthority.publicKey);
+
+      const payer = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY));
+      console.log('Payer: ', payer.publicKey);
+
+      const sourceAtaToken = (await getOrCreateAssociatedTokenAccount(connection, payer, USDT, buyer.publicKey))
+        .address;
+
+      const sigTransfer = await transferChecked(
+        connection,
+        payer,
+        testing,
+        USDT,
+        sourceAtaToken,
+        upgradableAuthority.publicKey,
+        20 * 10 ** 9,
+        9,
+        [],
+        { skipPreflight: true },
+      );
+
+      console.log('Transfer USDT: ', sigTransfer);
+
+      const tokenListingInfo = new PublicKey('41k8uTCLfsKLZXJEBthzMrCGr8UdYV68eYGWFohr9WDT');
+
+      const sourceAta = getAssociatedTokenAddressSync(mint, token_owner);
+      const toAta = getAssociatedTokenAddressSync(mint, buyer.publicKey);
+
+      const createAtaIns = createAssociatedTokenAccountInstruction(buyer.publicKey, toAta, buyer.publicKey, mint);
+
+      const buyIns = await program.methods
+        .buy(3)
+        .accounts({
+          signer: buyer.publicKey,
+          mint: mint,
+          sourceAta: sourceAta,
+          toAta: toAta,
+          tokenListingInfo: tokenListingInfo,
+          tokenOwner: token_owner,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .remainingAccounts([
+          {
+            pubkey: TOKEN_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: USDT,
             isWritable: false,
             isSigner: false,
           },
@@ -813,6 +929,33 @@ describe('dcarbon-contract', () => {
         });
 
       console.log('Create collection: ', tx);
+    });
+
+    xit('Burn Sft to mint NFT', async () => {
+      const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
+      const burnAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
+      const amount = 1;
+      const [metadata] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const tx = await program.methods
+        .burnSft(amount)
+        .accounts({
+          signer: upgradableAuthority.publicKey,
+          mintSft: mint,
+          burnAta,
+          metadataSft: metadata,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
+          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+        })
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Burn SFT: ', tx);
     });
   });
 

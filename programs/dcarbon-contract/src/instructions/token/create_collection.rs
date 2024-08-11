@@ -102,15 +102,15 @@ pub fn create_collection(ctx: Context<CreateCollection>, data: Vec<u8>) -> Resul
         .max_supply(0)
         .invoke_signed(&[seeds_signer])?;
 
-    // set collection size
-    SetCollectionSizeCpiBuilder::new(&ctx.accounts.token_metadata_program)
-        .collection_metadata(&ctx.accounts.metadata)
-        .collection_authority(&ctx.accounts.update_authority)
-        .collection_mint(&ctx.accounts.mint)
-        .set_collection_size_args(SetCollectionSizeArgs {
-            size: 50
-        })
-        .invoke_signed(&[seeds_signer])?;
+    // // set collection size
+    // SetCollectionSizeCpiBuilder::new(&ctx.accounts.token_metadata_program)
+    //     .collection_metadata(&ctx.accounts.metadata)
+    //     .collection_authority(&ctx.accounts.update_authority)
+    //     .collection_mint(&ctx.accounts.mint)
+    //     .set_collection_size_args(SetCollectionSizeArgs {
+    //         size: 50
+    //     })
+    //     .invoke_signed(&[seeds_signer])?;
 
     // try to find out collection size is
     Ok(())

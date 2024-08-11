@@ -114,7 +114,12 @@ pub mod dcarbon_contract {
         instructions::burn_sft(ctx, amount)
     }
 
-    pub fn mint_nft(ctx: Context<MintNft>) -> Result<()> {
+    pub fn mint_nft(
+        ctx: Context<MintNft>,
+        uri: String,
+        name: String,
+        symbol: String,
+    ) -> Result<()> {
         instructions::mint_nft(ctx)
     }
 }
