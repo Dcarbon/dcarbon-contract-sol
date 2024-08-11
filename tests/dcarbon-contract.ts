@@ -537,6 +537,7 @@ describe('dcarbon-contract', () => {
         projectId: projectId,
         currency: null,
         randomId,
+        delegateAmount: 10,
       };
 
       const tx = await program.methods
@@ -580,6 +581,7 @@ describe('dcarbon-contract', () => {
         projectId: projectId,
         currency: USDC,
         randomId,
+        delegateAmount: 10,
       };
 
       const tx = await program.methods

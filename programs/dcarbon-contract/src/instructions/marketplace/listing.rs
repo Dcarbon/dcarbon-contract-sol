@@ -4,18 +4,17 @@ use spl_token::instruction::approve_checked;
 use spl_token::solana_program::program::invoke;
 
 use crate::ID;
-use crate::state::{MARKETPLACE_PREFIX_SEED, MarketplaceCounter, TokenListingInfo};
+use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo};
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ListingArgs {
-    pub amount: f64,
+    pub delegate_amount: f64,
     pub price: f64,
     pub project_id: u16,
     pub currency: Option<Pubkey>,
     pub random_id: u16,
+    pub amount: f64
 }
-
-
 
 pub fn listing<'c: 'info, 'info>(
     ctx: Context<'_, '_, 'c, 'info, Listing<'info>>,
@@ -27,7 +26,6 @@ pub fn listing<'c: 'info, 'info>(
     let delegate = &ctx.accounts.marketplace_delegate;
     let signer = &ctx.accounts.signer;
     let system_program = &ctx.accounts.system_program;
-    let marketplace_counter = &mut ctx.accounts.marketplace_counter;
 
     let list_remaining_accounts = &mut ctx.remaining_accounts.iter();
     let token_listing_info = next_account_info(list_remaining_accounts)?;
@@ -39,7 +37,7 @@ pub fn listing<'c: 'info, 'info>(
         delegate.key,
         signer.key,
         &[],
-        (listing_args.amount * 10f64.powf(mint.decimals as f64)) as u64,
+        (listing_args.delegate_amount * 10f64.powf(mint.decimals as f64)) as u64,
         mint.decimals,
     )?;
 
@@ -58,14 +56,10 @@ pub fn listing<'c: 'info, 'info>(
         token_listing_info,
         mint.to_account_info(),
         signer.to_account_info(),
-        marketplace_counter.nonce,
         system_program.to_account_info(),
         listing_args.clone(),
     )?;
 
-    marketplace_counter.nonce += 1;
-
-    msg!("Nonce: {}", marketplace_counter.nonce);
     Ok(())
 }
 
@@ -88,14 +82,6 @@ pub struct Listing<'info> {
     )]
     /// CHECK:
     pub marketplace_delegate: AccountInfo<'info>,
-
-    #[account(
-        mut,
-        seeds = [MARKETPLACE_PREFIX_SEED, MarketplaceCounter::PREFIX_SEED],
-        bump,
-        owner = ID
-    )]
-    pub marketplace_counter: Account<'info, MarketplaceCounter>,
 
     /// CHECK:
     pub token_program: AccountInfo<'info>,

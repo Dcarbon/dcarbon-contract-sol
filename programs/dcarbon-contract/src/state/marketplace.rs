@@ -13,7 +13,6 @@ pub struct TokenListingInfo {
     pub amount: f64,
     pub price: f64, // LAMPORT
     pub project_id: u16,
-    pub nonce: u32,
     pub currency: Option<Pubkey>,
     pub remaining: f64,
 }
@@ -33,7 +32,6 @@ impl TokenListingInfo {
         token_listing_info_account: &'info AccountInfo<'info>,
         mint: AccountInfo<'info>,
         signer: AccountInfo<'info>,
-        nonce: u32,
         system_program: AccountInfo<'info>,
         listing_args: ListingArgs,
 
@@ -65,23 +63,12 @@ impl TokenListingInfo {
         token_listing_info.mint = mint.key();
         token_listing_info.amount = listing_args.amount;
         token_listing_info.price = listing_args.price;
-        token_listing_info.nonce = nonce;
         token_listing_info.project_id = listing_args.project_id;
         token_listing_info.currency = listing_args.currency;
         token_listing_info.remaining = listing_args.amount;
 
         token_listing_info.serialize(token_listing_info_account.to_account_info())
     }
-}
-
-#[account]
-#[derive(Debug, InitSpace)]
-pub struct MarketplaceCounter {
-    pub nonce: u32,
-}
-
-impl MarketplaceCounter {
-    pub const PREFIX_SEED: &'static [u8] = b"counter";
 }
 
 pub const MARKETPLACE_PREFIX_SEED: &'static [u8] = b"marketplace";
