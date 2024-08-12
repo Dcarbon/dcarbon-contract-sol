@@ -518,26 +518,17 @@ describe('dcarbon-contract', () => {
   describe('Marketplace', () => {
     const USDC = new PublicKey('6QLnQwoEzXNgrafQr3YNJtEsr4JuaY3ifNM4Lrs55hcc');
 
-    xit('Listing token with SOL', async () => {
+    it('Listing token with SOL', async () => {
       // get this mint from mins-sft
       const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
       const projectId = 56357;
       const sourceAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
-
-      const randomId = getRandomU16();
-
-      const [tokenListingInfo] = PublicKey.findProgramAddressSync(
-        [Buffer.from('marketplace'), mint.toBuffer(), upgradableAuthority.publicKey.toBuffer(), u16ToBytes(randomId)],
-        program.programId,
-      );
 
       const listingArgs: ListingArgs = {
         amount: 10,
         price: 0.1,
         projectId: projectId,
         currency: null,
-        randomId,
-        delegateAmount: 10,
       };
 
       const tx = await program.methods
@@ -548,13 +539,6 @@ describe('dcarbon-contract', () => {
           sourceAta: sourceAta,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
-        .remainingAccounts([
-          {
-            pubkey: tokenListingInfo,
-            isWritable: true,
-            isSigner: false,
-          },
-        ])
         .rpc({
           skipPreflight: true,
         });
@@ -568,20 +552,11 @@ describe('dcarbon-contract', () => {
       const projectId = 8030;
       const sourceAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
 
-      const randomId = getRandomU16();
-
-      const [tokenListingInfo] = PublicKey.findProgramAddressSync(
-        [Buffer.from('marketplace'), mint.toBuffer(), upgradableAuthority.publicKey.toBuffer(), u16ToBytes(randomId)],
-        program.programId,
-      );
-
       const listingArgs: ListingArgs = {
         amount: 10,
         price: 0.1,
         projectId: projectId,
         currency: USDC,
-        randomId,
-        delegateAmount: 10,
       };
 
       const currencyAta = getAssociatedTokenAddressSync(USDC, upgradableAuthority.publicKey);
@@ -596,13 +571,6 @@ describe('dcarbon-contract', () => {
           sourceAta: sourceAta,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
-        .remainingAccounts([
-          {
-            pubkey: tokenListingInfo,
-            isWritable: true,
-            isSigner: false,
-          },
-        ])
         .instruction();
 
       const tx = new Transaction();
