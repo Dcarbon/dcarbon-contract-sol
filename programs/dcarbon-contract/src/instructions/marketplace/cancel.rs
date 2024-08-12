@@ -1,9 +1,16 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 
-use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo};
+use crate::state::TokenListingInfo;
+use crate::utils::assert_keys_equal;
 
-pub fn cancel_listing(_ctx: Context<CancelListing>, _nonce: u32) -> Result<()> {
+pub fn cancel_listing(ctx: Context<CancelListing>) -> Result<()> {
+    let signer = &ctx.accounts.signer;
+    let token_listing_info = &ctx.accounts.token_listing_info;
+
+    assert_keys_equal(signer.key, &token_listing_info.owner)?;
+
+    msg!("cancel_info-{}-{}", signer.key, token_listing_info.owner);
     Ok(())
 }
 
@@ -20,8 +27,6 @@ pub struct CancelListing<'info> {
 
     #[account(
         mut,
-        seeds = [MARKETPLACE_PREFIX_SEED, mint.key().as_ref(), signer.key().as_ref(), & _nonce.to_le_bytes()],
-        bump,
         close = signer
     )]
     pub token_listing_info: Box<Account<'info, TokenListingInfo>>,

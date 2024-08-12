@@ -8,12 +8,10 @@ use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo};
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ListingArgs {
-    pub delegate_amount: f64,
     pub price: f64,
     pub project_id: u16,
     pub currency: Option<Pubkey>,
-    pub random_id: u16,
-    pub amount: f64
+    pub amount: f64,
 }
 
 pub fn listing<'c: 'info, 'info>(
@@ -25,10 +23,17 @@ pub fn listing<'c: 'info, 'info>(
     let mint = &ctx.accounts.mint;
     let delegate = &ctx.accounts.marketplace_delegate;
     let signer = &ctx.accounts.signer;
-    let system_program = &ctx.accounts.system_program;
+    let token_listing_info = &mut ctx.accounts.token_listing_info;
 
-    let list_remaining_accounts = &mut ctx.remaining_accounts.iter();
-    let token_listing_info = next_account_info(list_remaining_accounts)?;
+    let mut delegate_amount = listing_args.amount;
+
+    if !token_listing_info.to_account_info().data_is_empty() {
+        delegate_amount += token_listing_info.remaining;
+
+        token_listing_info.update(listing_args)?;
+    } else {
+        token_listing_info.assign(listing_args, signer.key(), mint.key())?;
+    }
 
     let approve_checked_ins = approve_checked(
         token_program.key,
@@ -37,7 +42,7 @@ pub fn listing<'c: 'info, 'info>(
         delegate.key,
         signer.key,
         &[],
-        (listing_args.delegate_amount * 10f64.powf(mint.decimals as f64)) as u64,
+        (delegate_amount * 10f64.powf(mint.decimals as f64)) as u64,
         mint.decimals,
     )?;
 
@@ -49,15 +54,6 @@ pub fn listing<'c: 'info, 'info>(
             delegate.to_account_info(),
             signer.to_account_info(),
         ],
-    )?;
-
-    // assign token listing info
-    TokenListingInfo::assign(
-        token_listing_info,
-        mint.to_account_info(),
-        signer.to_account_info(),
-        system_program.to_account_info(),
-        listing_args.clone(),
     )?;
 
     Ok(())
@@ -74,6 +70,15 @@ pub struct Listing<'info> {
     #[account(mut)]
     /// CHECK:
     pub source_ata: AccountInfo<'info>,
+
+    #[account(
+        init_if_needed,
+        payer = signer,
+        space = 8 + TokenListingInfo::INIT_SPACE,
+        seeds = [TokenListingInfo::PREFIX_SEED, signer.key().as_ref(), mint.key().as_ref()],
+        bump
+    )]
+    pub token_listing_info: Account<'info, TokenListingInfo>,
 
     #[account(
         seeds = [MARKETPLACE_PREFIX_SEED, b"delegate"],

@@ -1,9 +1,5 @@
 use anchor_lang::prelude::*;
-
-use crate::ID;
 use crate::instructions::ListingArgs;
-use crate::state::BpfWriter;
-use crate::utils::{assert_keys_equal, create_account};
 
 #[account]
 #[derive(Debug, InitSpace)]
@@ -18,56 +14,31 @@ pub struct TokenListingInfo {
 }
 
 impl TokenListingInfo {
-    fn from<'info>(x: &'info AccountInfo<'info>) -> Account<'info, Self> {
-        Account::try_from_unchecked(x).unwrap()
+    pub const PREFIX_SEED: &'static [u8] = b"self";
+
+
+    pub fn update(&mut self, listing_args: ListingArgs) -> Result<()> {
+        self.amount += listing_args.amount;
+        self.remaining += listing_args.amount;
+
+        Ok(())
     }
 
-    pub fn serialize(&self, info: AccountInfo) -> Result<()> {
-        let dst: &mut [u8] = &mut info.try_borrow_mut_data().unwrap();
-        let mut writer: BpfWriter<&mut [u8]> = BpfWriter::new(dst);
-        TokenListingInfo::try_serialize(self, &mut writer)
-    }
-
-    pub fn assign<'info>(
-        token_listing_info_account: &'info AccountInfo<'info>,
-        mint: AccountInfo<'info>,
-        signer: AccountInfo<'info>,
-        system_program: AccountInfo<'info>,
+    pub fn assign(
+        &mut self,
         listing_args: ListingArgs,
-
+        signer_key: Pubkey,
+        mint_key: Pubkey,
     ) -> Result<()> {
-        let seeds: &[&[u8]] = &[
-            MARKETPLACE_PREFIX_SEED,
-            mint.key.as_ref(),
-            signer.key.as_ref(),
-            &listing_args.random_id.to_le_bytes(),
-        ];
+        self.owner = signer_key;
+        self.mint = mint_key;
+        self.amount = listing_args.amount;
+        self.price = listing_args.price;
+        self.project_id = listing_args.project_id;
+        self.currency = listing_args.currency;
+        self.remaining = listing_args.amount;
 
-        let (public_key, bump) = Pubkey::find_program_address(&seeds, &ID);
-
-        assert_keys_equal(&public_key, token_listing_info_account.key)?;
-
-        create_account(
-            system_program,
-            signer.to_account_info(),
-            token_listing_info_account.clone(),
-            seeds,
-            bump,
-            (8 + TokenListingInfo::INIT_SPACE) as u64,
-            &ID,
-        )?;
-
-        let mut token_listing_info = TokenListingInfo::from(&token_listing_info_account);
-
-        token_listing_info.owner = signer.key();
-        token_listing_info.mint = mint.key();
-        token_listing_info.amount = listing_args.amount;
-        token_listing_info.price = listing_args.price;
-        token_listing_info.project_id = listing_args.project_id;
-        token_listing_info.currency = listing_args.currency;
-        token_listing_info.remaining = listing_args.amount;
-
-        token_listing_info.serialize(token_listing_info_account.to_account_info())
+        Ok(())
     }
 }
 

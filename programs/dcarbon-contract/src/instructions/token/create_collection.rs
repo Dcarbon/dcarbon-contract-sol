@@ -1,10 +1,10 @@
 use anchor_lang::{prelude::*, system_program::{create_account, CreateAccount}};
-use mpl_token_metadata::{instructions::{CreateMasterEditionV3CpiBuilder, CreateMetadataAccountV3CpiBuilder, SetCollectionSizeCpiBuilder}, types::{DataV2, SetCollectionSizeArgs},
+use mpl_token_metadata::{instructions::{CreateMasterEditionV3CpiBuilder, CreateMetadataAccountV3CpiBuilder}, types::DataV2,
 };
-use crate::{ ID};
-
-use spl_token::{instruction::{mint_to, initialize_mint2}, solana_program::program::invoke_signed};
 use spl_associated_token_account::instruction::create_associated_token_account;
+use spl_token::{instruction::{initialize_mint2, mint_to}, solana_program::program::invoke_signed};
+
+use crate::ID;
 use crate::state::Admin;
 
 pub fn create_collection(ctx: Context<CreateCollection>, data: Vec<u8>) -> Result<()> {
@@ -19,7 +19,7 @@ pub fn create_collection(ctx: Context<CreateCollection>, data: Vec<u8>) -> Resul
 
     // create account mint
 
-    create_account(CpiContext::new(ctx.accounts.system_program.to_account_info(), CreateAccount {from: ctx.accounts.creator.to_account_info(), to: ctx.accounts.mint.to_account_info().clone()}),
+    create_account(CpiContext::new(ctx.accounts.system_program.to_account_info(), CreateAccount { from: ctx.accounts.creator.to_account_info(), to: ctx.accounts.mint.to_account_info().clone() }),
                    1461600, 82, &ctx.accounts.token_program.key).unwrap();
 
     // initial mint
@@ -66,7 +66,7 @@ pub fn create_collection(ctx: Context<CreateCollection>, data: Vec<u8>) -> Resul
             ctx.accounts.collection_token_account.clone(),
             ctx.accounts.creator.to_account_info().clone()
         ],
-        &[seeds_signer]
+        &[seeds_signer],
     )?;
 
     // create collection metadata
@@ -102,15 +102,15 @@ pub fn create_collection(ctx: Context<CreateCollection>, data: Vec<u8>) -> Resul
         .max_supply(0)
         .invoke_signed(&[seeds_signer])?;
 
-    // set collection size
-    SetCollectionSizeCpiBuilder::new(&ctx.accounts.token_metadata_program)
-        .collection_metadata(&ctx.accounts.metadata)
-        .collection_authority(&ctx.accounts.update_authority)
-        .collection_mint(&ctx.accounts.mint)
-        .set_collection_size_args(SetCollectionSizeArgs {
-            size: 50
-        })
-        .invoke_signed(&[seeds_signer])?;
+    // // set collection size
+    // SetCollectionSizeCpiBuilder::new(&ctx.accounts.token_metadata_program)
+    //     .collection_metadata(&ctx.accounts.metadata)
+    //     .collection_authority(&ctx.accounts.update_authority)
+    //     .collection_mint(&ctx.accounts.mint)
+    //     .set_collection_size_args(SetCollectionSizeArgs {
+    //         size: 50
+    //     })
+    //     .invoke_signed(&[seeds_signer])?;
 
     // try to find out collection size is
     Ok(())
@@ -125,7 +125,7 @@ pub struct CreateCollection<'info> {
     pub creator: Signer<'info>,
 
     #[account(
-        seeds=[b"admin", creator.key().as_ref()],
+        seeds = [b"admin", creator.key().as_ref()],
         bump,
         owner = ID,
     )]
@@ -164,5 +164,5 @@ pub struct CreateCollection<'info> {
     pub token_program: AccountInfo<'info>,
 
     /// CHECK:
-    pub associated_token_program: AccountInfo<'info>
+    pub associated_token_program: AccountInfo<'info>,
 }
