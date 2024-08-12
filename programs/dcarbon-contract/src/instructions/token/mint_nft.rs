@@ -4,25 +4,26 @@ use anchor_spl::{
     metadata::{
         create_master_edition_v3, create_metadata_accounts_v3,
         CreateMasterEditionV3, CreateMetadataAccountsV3, Metadata,
-        set_and_verify_sized_collection_item, SetAndVerifySizedCollectionItem, sign_metadata, SignMetadata,
+        set_and_verify_sized_collection_item, SetAndVerifySizedCollectionItem,
     },
     token::{Mint, mint_to, MintTo, Token, TokenAccount},
 };
 use mpl_token_metadata::types::DataV2;
 
 use crate::ID;
-use crate::instructions::BurningRecord;
-
-#[constant]
-pub const SEED: &str = "Collection";
+use crate::instructions::{BurningRecord, SEED};
 
 pub fn mint_nft(
     ctx: Context<MintNft>,
     uri: String,
     name: String,
     symbol: String,
+    amount: f64,
 ) -> Result<()> {
-    let seeds: &[&[u8]] = &[b"update_authority"];
+    let burning_record = &mut ctx.accounts.burning_record;
+    burning_record.total_amount += amount;
+
+    let seeds: &[&[u8]] = &[SEED.as_ref()];
 
     let (_, bump) = Pubkey::find_program_address(&seeds, &ID);
 

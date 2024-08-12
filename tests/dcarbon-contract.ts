@@ -3,15 +3,14 @@ import { AnchorProvider, IdlTypes, Program } from '@coral-xyz/anchor';
 import { DcarbonContract } from '../target/types/dcarbon_contract';
 import {
   CreateArgsArgs,
-  DataV2Args,
   getCreateArgsSerializer,
-  getDataV2Serializer,
   MPL_TOKEN_METADATA_PROGRAM_ID,
   TokenStandard,
 } from '@metaplex-foundation/mpl-token-metadata';
 import { percentAmount, some } from '@metaplex-foundation/umi';
 import {
   AddressLookupTableProgram,
+  ComputeBudgetProgram,
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
@@ -26,7 +25,6 @@ import BN from 'bn.js';
 import { prepareParams } from '../src/verify';
 import { ethers } from 'ethers';
 import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   getAssociatedTokenAddressSync,
   getOrCreateAssociatedTokenAccount,
@@ -518,10 +516,10 @@ describe('dcarbon-contract', () => {
   describe('Marketplace', () => {
     const USDC = new PublicKey('6QLnQwoEzXNgrafQr3YNJtEsr4JuaY3ifNM4Lrs55hcc');
 
-    it('Listing token with SOL', async () => {
+    xit('Listing token with SOL', async () => {
       // get this mint from mins-sft
-      const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
-      const projectId = 56357;
+      const mint = new PublicKey('FpgYHp1iRu3jDCvxF6DsAiNoZhTC884WXzMJ7TCNqDgm');
+      const projectId = 9302;
       const sourceAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
 
       const listingArgs: ListingArgs = {
@@ -841,21 +839,89 @@ describe('dcarbon-contract', () => {
     });
 
     xit('Create collection', async () => {
-      const [collectionAuthority] = PublicKey.findProgramAddressSync(
-        [Buffer.from('update_authority')],
+      const [collectionPDA] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from('Collection')],
         program.programId,
       );
 
-      const mint = Keypair.generate();
+      const collectionTokenAccount = getAssociatedTokenAddressSync(collectionPDA, upgradableAuthority.publicKey);
 
-      const ata = getAssociatedTokenAddressSync(mint.publicKey, collectionAuthority, true);
-
-      const [metadataAccount] = PublicKey.findProgramAddressSync(
-        [Buffer.from('metadata', 'utf8'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
+      const [collectionMetadataPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata', 'utf8'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), collectionPDA.toBuffer()],
         TOKEN_METADATA_PROGRAM_ID,
       );
 
-      const [masterEditionAccount] = PublicKey.findProgramAddressSync(
+      const [collectionMasterEditionPDA] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('metadata', 'utf8'),
+          TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+          collectionPDA.toBuffer(),
+          Buffer.from('edition', 'utf8'),
+        ],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const tx = await program.methods
+        .createCollection(
+          'https://arweave.net/eJX2Xi-wzkNh6zRXQsx9wEKTq3E6P5bdoZKvWQ3XHzE',
+          'Dcarbon Collection',
+          'DCC',
+        )
+        .accounts({
+          signer: upgradableAuthority.publicKey,
+          metadataAccount: collectionMetadataPDA,
+          masterEdition: collectionMasterEditionPDA,
+          tokenAccount: collectionTokenAccount,
+        })
+        .rpc({
+          skipPreflight: true,
+        });
+
+      console.log('Create collection: ', tx);
+    });
+
+    it('Mint NFT cert', async () => {
+      const [burningRecord] = PublicKey.findProgramAddressSync(
+        [Buffer.from('burning_record'), upgradableAuthority.publicKey.toBuffer()],
+        program.programId,
+      );
+
+      const totalAmount = (await program.account.burningRecord.fetch(burningRecord)).totalAmount;
+
+      console.log(totalAmount);
+
+      const burningAmount = totalAmount > 1 ? totalAmount - 1 : totalAmount;
+
+      const mint = anchor.web3.Keypair.generate();
+
+      const tokenAccount = getAssociatedTokenAddressSync(mint.publicKey, upgradableAuthority.publicKey);
+
+      const [collectionPDA] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from('Collection')],
+        program.programId,
+      );
+
+      const [collectionMetadataPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata', 'utf8'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), collectionPDA.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const [metadataAccount] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata', 'utf8'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), , mint.publicKey.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const [collectionMasterEditionPDA] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('metadata', 'utf8'),
+          TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+          collectionPDA.toBuffer(),
+          Buffer.from('edition', 'utf8'),
+        ],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const [masterEditionPDA] = PublicKey.findProgramAddressSync(
         [
           Buffer.from('metadata', 'utf8'),
           TOKEN_METADATA_PROGRAM_ID.toBuffer(),
@@ -865,37 +931,34 @@ describe('dcarbon-contract', () => {
         TOKEN_METADATA_PROGRAM_ID,
       );
 
-      const metadata: DataV2Args = {
-        name: 'Dcarbon Collection',
-        symbol: 'DCC',
-        uri: 'https://arweave.net/eJX2Xi-wzkNh6zRXQsx9wEKTq3E6P5bdoZKvWQ3XHzE',
-        sellerFeeBasisPoints: 100,
-        creators: null,
-        collection: null,
-        uses: null,
-      };
+      const modifyComputeUnits = ComputeBudgetProgram.setComputeUnitLimit({
+        units: 300_000,
+      });
 
-      const serialize = getDataV2Serializer();
-      const data = serialize.serialize(metadata);
-
-      const tx = await program.methods
-        .createCollection(Buffer.from(data))
+      const mintNftIns = await program.methods
+        .mintNft(
+          'https://arweave.net/eJX2Xi-wzkNh6zRXQsx9wEKTq3E6P5bdoZKvWQ3XHzE',
+          'Dcarbon Cert',
+          'DCT',
+          burningAmount,
+        )
         .accounts({
-          creator: upgradableAuthority.publicKey,
-          collectionTokenAccount: ata,
-          metadata: metadataAccount,
-          masterEdition: masterEditionAccount,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          mint: mint.publicKey,
-          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          signer: upgradableAuthority.publicKey,
+          collectionMetadataAccount: collectionMetadataPDA,
+          collectionMasterEdition: collectionMasterEditionPDA,
+          nftMint: mint.publicKey,
+          metadataAccount: metadataAccount,
+          masterEdition: masterEditionPDA,
+          tokenAccount: tokenAccount,
         })
-        .signers([mint])
-        .rpc({
-          skipPreflight: true,
-        });
+        .instruction();
 
-      console.log('Create collection: ', tx);
+      const tx = new Transaction().add(modifyComputeUnits).add(mintNftIns);
+      tx.feePayer = upgradableAuthority.publicKey;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+      const sig = await anchorProvider.sendAndConfirm(tx, [mint], { skipPreflight: true });
+      console.log('Sig: ', sig);
     });
 
     xit('Burn Sft to mint NFT', async () => {
