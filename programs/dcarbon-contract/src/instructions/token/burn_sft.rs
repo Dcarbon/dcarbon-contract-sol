@@ -1,9 +1,12 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::program_option::COption;
 use anchor_spl::token::Mint;
 use mpl_token_metadata::instructions::BurnCpiBuilder;
 use mpl_token_metadata::types::BurnArgs;
 
+use crate::error::DCarbonError;
 use crate::ID;
+use crate::utils::assert_keys_equal;
 
 pub fn burn_sft(ctx: Context<BurnSft>, amount: f64) -> Result<()> {
     let mint_sft = &ctx.accounts.mint_sft;
@@ -14,6 +17,15 @@ pub fn burn_sft(ctx: Context<BurnSft>, amount: f64) -> Result<()> {
     let token_metadata_program = &ctx.accounts.token_metadata_program;
     let burn_ata = &ctx.accounts.burn_ata;
     let burning_record = &mut ctx.accounts.burning_record;
+    let authority = &ctx.accounts.authority;
+
+    // check mint_sft is our contract
+    match mint_sft.mint_authority {
+        COption::Some(update_auth) => {
+            assert_keys_equal(&update_auth, authority.key)?;
+        }
+        COption::None => return Err(DCarbonError::InvalidMint.into())
+    }
 
     let burn_data = BurnArgs::V1 {
         amount: (amount * 10f64.powf(mint_sft.decimals as f64)) as u64

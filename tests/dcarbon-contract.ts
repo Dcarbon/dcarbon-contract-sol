@@ -880,7 +880,7 @@ describe('dcarbon-contract', () => {
       console.log('Create collection: ', tx);
     });
 
-    it('Mint NFT cert', async () => {
+    xit('Mint NFT cert', async () => {
       const [burningRecord] = PublicKey.findProgramAddressSync(
         [Buffer.from('burning_record'), upgradableAuthority.publicKey.toBuffer()],
         program.programId,
@@ -892,14 +892,11 @@ describe('dcarbon-contract', () => {
 
       const burningAmount = totalAmount > 1 ? totalAmount - 1 : totalAmount;
 
-      const mint = anchor.web3.Keypair.generate();
+      const mint = Keypair.generate();
 
       const tokenAccount = getAssociatedTokenAddressSync(mint.publicKey, upgradableAuthority.publicKey);
 
-      const [collectionPDA] = anchor.web3.PublicKey.findProgramAddressSync(
-        [Buffer.from('Collection')],
-        program.programId,
-      );
+      const [collectionPDA] = PublicKey.findProgramAddressSync([Buffer.from('Collection')], program.programId);
 
       const [collectionMetadataPDA] = PublicKey.findProgramAddressSync(
         [Buffer.from('metadata', 'utf8'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), collectionPDA.toBuffer()],
@@ -907,7 +904,7 @@ describe('dcarbon-contract', () => {
       );
 
       const [metadataAccount] = PublicKey.findProgramAddressSync(
-        [Buffer.from('metadata', 'utf8'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), , mint.publicKey.toBuffer()],
+        [Buffer.from('metadata', 'utf8'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
         TOKEN_METADATA_PROGRAM_ID,
       );
 

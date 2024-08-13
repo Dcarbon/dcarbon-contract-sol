@@ -30,5 +30,7 @@ pub enum DCarbonError {
 
     NotMintTime,
 
-    NotEnoughAmount
+    NotEnoughAmount,
+
+    InvalidMint,
 }
