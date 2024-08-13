@@ -39,8 +39,6 @@ pub struct InitConfig<'info> {
         payer = signer,
         seeds = [ContractConfig::PREFIX_SEED],
         bump,
-        // mut,
-        // close = signer
     )]
     pub contract_config: Account<'info, ContractConfig>,
 

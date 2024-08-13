@@ -1,12 +1,22 @@
 use anchor_lang::prelude::*;
 
-use crate::state::{Admin, Device, DeviceStatus};
+use crate::error::DCarbonError;
 use crate::ID;
+use crate::state::{Admin, Device, DeviceStatus};
 
-pub fn set_active(ctx: Context<SetActive>, _project_id: u16, _device_id: u16) -> Result<()> {
+pub fn set_active(ctx: Context<SetActive>, project_id: u16, device_id: u16) -> Result<()> {
     let device_status = &mut ctx.accounts.device_status;
 
     let is_active = device_status.is_active;
+
+    // check project_id and device_id
+    if project_id <= 0 {
+        return Err(DCarbonError::InvalidProjectId.into());
+    }
+
+    if device_id <= 0 {
+        return Err(DCarbonError::InvalidDeviceId.into());
+    }
 
     device_status.is_active = !is_active;
 
@@ -14,7 +24,7 @@ pub fn set_active(ctx: Context<SetActive>, _project_id: u16, _device_id: u16) ->
 }
 
 #[derive(Accounts)]
-#[instruction(_project_id: u16, _device_id: u16)]
+#[instruction(project_id: u16, device_id: u16)]
 pub struct SetActive<'info> {
     #[account(
         mut,
@@ -30,7 +40,7 @@ pub struct SetActive<'info> {
     pub admin_pda: Account<'info, Admin>,
 
     #[account(
-        seeds = [Device::PREFIX_SEED, &_project_id.to_le_bytes(), &_device_id.to_le_bytes()],
+        seeds = [Device::PREFIX_SEED, & project_id.to_le_bytes(), & device_id.to_le_bytes()],
         bump,
         owner = ID,
     )]
@@ -38,7 +48,7 @@ pub struct SetActive<'info> {
 
     #[account(
         mut,
-        seeds = [DeviceStatus::PREFIX_SEED, &_device_id.to_le_bytes()],
+        seeds = [DeviceStatus::PREFIX_SEED, & device_id.to_le_bytes()],
         bump,
         owner = ID,
     )]

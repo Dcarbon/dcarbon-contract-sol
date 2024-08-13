@@ -5,8 +5,7 @@ pub enum DCarbonError {
     #[msg("PublicKey Mismatch")]
     PublicKeyMismatch,
 
-    #[msg("The length of the device Id must be equal to 24")]
-    InvalidProjectIdLength,
+    InvalidProjectId,
 
     #[msg("Master account is already init")]
     MasterIsAlreadyInit,
@@ -25,7 +24,6 @@ pub enum DCarbonError {
     #[msg("Init config for contract is invalid")]
     InitArgsInvalid,
 
-    #[msg("")]
     InvalidNonce,
 
     NotMintTime,
@@ -41,4 +39,8 @@ pub enum DCarbonError {
     InvalidStringLength,
 
     InvalidNumber,
+
+    InvalidDeviceId,
+
+    InvalidDeviceType,
 }
