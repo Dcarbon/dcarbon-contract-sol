@@ -959,9 +959,9 @@ describe('dcarbon-contract', () => {
     });
 
     xit('Burn Sft to mint NFT', async () => {
-      const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
+      const mint = new PublicKey('CUqJNRDGD68Xm5L7B8fCQaYcg3BACD95JEFABcRMVJ8G');
       const burnAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
-      const amount = 1;
+      const amount = 1000;
       const [metadata] = PublicKey.findProgramAddressSync(
         [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer()],
         TOKEN_METADATA_PROGRAM_ID,
