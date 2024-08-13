@@ -33,4 +33,6 @@ pub enum DCarbonError {
     NotEnoughAmount,
 
     InvalidMint,
+
+    InvalidAmount,
 }

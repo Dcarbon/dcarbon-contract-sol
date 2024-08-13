@@ -10,6 +10,7 @@ use anchor_spl::{
 };
 use mpl_token_metadata::types::DataV2;
 
+use crate::error::DCarbonError;
 use crate::ID;
 use crate::instructions::{BurningRecord, SEED};
 
@@ -21,7 +22,18 @@ pub fn mint_nft(
     amount: f64,
 ) -> Result<()> {
     let burning_record = &mut ctx.accounts.burning_record;
-    burning_record.total_amount += amount;
+
+    // check remaining
+    if burning_record.remaining <= 0.0 || amount > burning_record.remaining {
+        return Err(DCarbonError::NotEnoughAmount.into());
+    }
+
+    // check if valid amount
+    if amount <= 0.0 {
+        return Err(DCarbonError::InvalidAmount.into());
+    }
+
+    burning_record.remaining -= amount;
 
     let seeds: &[&[u8]] = &[SEED.as_ref()];
 

@@ -59,6 +59,7 @@ pub fn burn_sft(ctx: Context<BurnSft>, amount: f64) -> Result<()> {
         .invoke_signed(&[seeds_signer])?;
 
     burning_record.total_amount += amount;
+    burning_record.remaining += amount;
 
     Ok(())
 }
@@ -114,6 +115,7 @@ pub struct BurnSft<'info> {
 #[derive(Debug, InitSpace)]
 pub struct BurningRecord {
     pub total_amount: f64,
+    pub remaining: f64,
 }
 
 impl BurningRecord {
