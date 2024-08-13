@@ -5,6 +5,7 @@ use spl_token::solana_program::program::invoke;
 
 use crate::ID;
 use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo};
+use crate::utils::cmp_pubkeys;
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ListingArgs {
@@ -24,12 +25,12 @@ pub fn listing<'c: 'info, 'info>(
     let delegate = &ctx.accounts.marketplace_delegate;
     let signer = &ctx.accounts.signer;
     let token_listing_info = &mut ctx.accounts.token_listing_info;
+    let system_program = &ctx.accounts.system_program;
 
     let mut delegate_amount = listing_args.amount;
 
-    if !token_listing_info.to_account_info().data_is_empty() {
+    if !cmp_pubkeys(&token_listing_info.owner, system_program.key) {
         delegate_amount += token_listing_info.remaining;
-
         token_listing_info.update(listing_args)?;
     } else {
         token_listing_info.assign(listing_args, signer.key(), mint.key())?;

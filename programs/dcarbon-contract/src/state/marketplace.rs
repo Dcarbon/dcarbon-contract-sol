@@ -16,11 +16,10 @@ pub struct TokenListingInfo {
 impl TokenListingInfo {
     pub const PREFIX_SEED: &'static [u8] = b"self";
 
-
     pub fn update(&mut self, listing_args: ListingArgs) -> Result<()> {
         self.amount += listing_args.amount;
         self.remaining += listing_args.amount;
-
+        self.price += listing_args.price;
         Ok(())
     }
 

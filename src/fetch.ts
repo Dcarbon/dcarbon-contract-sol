@@ -122,3 +122,18 @@ export function u64toBytes(value: number): Uint8Array {
 }
 
 fetchAllTokenFollowProject();
+
+const fetchTokenListingInfo = async () => {
+  const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+
+  const program = new Program<DcarbonContract>(idl as DcarbonContract, {
+    connection: connection,
+  });
+
+  const data = await program.account.tokenListingInfo.fetch(
+    new PublicKey('4myJnihFR6kbuMzqCZchnA58vR53j1i7e6H2bxTjTub3'),
+  );
+  console.log(data);
+};
+
+fetchTokenListingInfo();

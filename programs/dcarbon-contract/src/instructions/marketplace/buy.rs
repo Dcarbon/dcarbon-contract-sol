@@ -142,6 +142,9 @@ pub fn buy<'c: 'info, 'info>(
 pub struct Buy<'info> {
     pub signer: Signer<'info>,
 
+    #[account(
+        constraint = mint.key() == token_listing_info.mint
+    )]
     pub mint: Account<'info, Mint>,
 
     #[account(mut)]
