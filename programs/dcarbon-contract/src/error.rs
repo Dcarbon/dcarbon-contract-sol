@@ -35,4 +35,10 @@ pub enum DCarbonError {
     InvalidMint,
 
     InvalidAmount,
+
+    InvalidValue,
+
+    InvalidStringLength,
+
+    InvalidNumber,
 }

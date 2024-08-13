@@ -1,16 +1,12 @@
 use anchor_lang::prelude::*;
-
-use crate::state::{Coefficient, Master};
-
 use crate::ID;
+use crate::state::{Coefficient, Master};
 
 pub fn set_coefficient(ctx: Context<SetCoefficient>, key: String, value: u64) -> Result<()> {
     let coefficient = &mut ctx.accounts.coefficient;
 
-    coefficient.value = value;
-    coefficient.key = key;
-
-    Ok(())
+    // check and assign value
+    coefficient.assign(key, value)
 }
 
 #[derive(Accounts)]
