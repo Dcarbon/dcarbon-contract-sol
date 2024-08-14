@@ -22,24 +22,7 @@ pub struct Device {
 impl Device {
     pub const PREFIX_SEED: &'static [u8] = b"device";
 
-    pub fn deserialize<'info>(x: &'info AccountInfo<'info>) -> Account<'info, Self> {
-        Account::try_from_unchecked(x).unwrap()
-    }
-
-    // check device id length
-    fn validate(&self, register_device_args: RegisterDeviceArgs) -> Result<()> {
-        // check project_id
-        if register_device_args.project_id > 0 {
-            Ok(())
-        } else {
-            Err(DCarbonError::InvalidProjectIdLength.into())
-        }
-    }
-
     pub fn assign_value(&mut self, register_device_args: RegisterDeviceArgs) -> Result<()> {
-        // validate
-        self.validate(register_device_args.clone())?;
-
         self.id = register_device_args.device_id;
         self.device_type = register_device_args.device_type;
         self.project_id = register_device_args.project_id;

@@ -1,10 +1,15 @@
 use anchor_lang::prelude::*;
 
+use crate::error::DCarbonError;
 use crate::ID;
 use crate::state::*;
 
 pub fn register_device(ctx: Context<RegisterDevice>, register_device_args: RegisterDeviceArgs) -> Result<()> {
     let device = &mut ctx.accounts.device;
+    let contract_config = &ctx.accounts.contract_config;
+
+    // validate args
+    register_device_args.validate(contract_config.minting_limits.clone())?;
 
     // assign data for device
     device.assign_value(register_device_args)?;
@@ -32,7 +37,7 @@ pub struct RegisterDevice<'info> {
         init,
         payer = signer,
         space = 8 + Device::INIT_SPACE,
-        seeds = [Device::PREFIX_SEED, &register_device_args.project_id.to_le_bytes(), &register_device_args.device_id.to_le_bytes()],
+        seeds = [Device::PREFIX_SEED, & register_device_args.project_id.to_le_bytes(), & register_device_args.device_id.to_le_bytes()],
         bump
     )]
     pub device: Account<'info, Device>,
@@ -41,10 +46,17 @@ pub struct RegisterDevice<'info> {
         init_if_needed,
         payer = signer,
         space = 8 + DeviceStatus::INIT_SPACE,
-        seeds = [DeviceStatus::PREFIX_SEED, &register_device_args.device_id.to_le_bytes()],
+        seeds = [DeviceStatus::PREFIX_SEED, & register_device_args.device_id.to_le_bytes()],
         bump
     )]
     pub device_status: Account<'info, DeviceStatus>,
+
+    #[account(
+        seeds = [ContractConfig::PREFIX_SEED],
+        bump,
+        owner = ID
+    )]
+    pub contract_config: Account<'info, ContractConfig>,
 
     pub system_program: Program<'info, System>,
 }
@@ -55,6 +67,24 @@ pub struct RegisterDeviceArgs {
     pub device_id: u16,
     pub device_type: u16,
     pub owner: Pubkey,
-    pub minter: Pubkey
+    pub minter: Pubkey,
+}
+
+impl RegisterDeviceArgs {
+    pub fn validate(&self, mut device_limit_vec: Vec<DeviceLimit>) -> Result<()> {
+        if self.project_id <= 0 {
+            return Err(DCarbonError::InvalidProjectId.into());
+        }
+
+        if self.device_id <= 0 {
+            return Err(DCarbonError::InvalidDeviceId.into());
+        }
+
+        if let Some(device) = device_limit_vec.iter_mut().find(|d| d.device_type == self.device_type) {
+            Ok(())
+        } else {
+            return Err(DCarbonError::InvalidDeviceType.into());
+        }
+    }
 }
 

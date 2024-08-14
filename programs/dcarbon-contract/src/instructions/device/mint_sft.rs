@@ -44,14 +44,12 @@ pub fn mint_sft<'c: 'info, 'info>(
     let owner_governance = &mut ctx.accounts.owner_governance;
     let device_owner = &ctx.accounts.device_owner;
 
+    // check args
+    mint_sft_args.validate(device_status.nonce)?;
+
     // check is active
     if !device_status.is_active {
         return Err(DCarbonError::DeviceIsNotActive.into());
-    }
-
-    // check nonce, check valid
-    if mint_sft_args.nonce != device_status.nonce + 1 {
-        return Err(DCarbonError::InvalidNonce.into());
     }
 
     // check time
@@ -270,4 +268,27 @@ pub struct MintSft<'info> {
 
     /// CHECK:
     pub ata_program: AccountInfo<'info>,
+}
+
+impl MintSftArgs {
+    pub fn validate(&self, nonce: u16) -> Result<()> {
+        if self.project_id <= 0 {
+            return Err(DCarbonError::InvalidProjectId.into());
+        }
+
+        if self.device_id <= 0 {
+            return Err(DCarbonError::InvalidDeviceId.into());
+        }
+
+        if self.total_amount <= 0.0 {
+            return Err(DCarbonError::InvalidNumber.into());
+        }
+
+        // check nonce, check valid
+        if self.nonce != nonce + 1 {
+            return Err(DCarbonError::InvalidNonce.into());
+        }
+
+        Ok(())
+    }
 }
