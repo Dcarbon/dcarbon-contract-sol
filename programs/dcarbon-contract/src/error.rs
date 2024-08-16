@@ -43,4 +43,6 @@ pub enum DCarbonError {
     InvalidDeviceId,
 
     InvalidDeviceType,
+
+    DontHaveEnoughAmountToClaim
 }

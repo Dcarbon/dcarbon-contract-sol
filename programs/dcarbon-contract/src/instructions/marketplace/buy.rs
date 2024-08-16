@@ -134,6 +134,8 @@ pub fn buy<'c: 'info, 'info>(
     // decrease token_listing_info
     token_listing_info.remaining -= amount;
 
+    msg!("buy_info-{}-{}-{}-{:?}-{}", token_owner.key, signer.key, amount, token_listing_info.currency, fee_amount);
+
     Ok(())
 }
 

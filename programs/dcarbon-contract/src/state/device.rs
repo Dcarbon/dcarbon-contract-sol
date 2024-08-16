@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 
-use crate::error::DCarbonError;
 use crate::instructions::RegisterDeviceArgs;
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]

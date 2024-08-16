@@ -156,6 +156,8 @@ pub fn mint_sft<'c: 'info, 'info>(
                 if governance.amount > 0.0 && governance.amount >= governance_amount {
                     governance.amount -= governance_amount;
                     owner_governance.amount += governance_amount;
+                    owner_governance.owner = device_owner.key();
+                    owner_governance.mint = governance.mint;
                 }
 
                 // increase
@@ -169,12 +171,6 @@ pub fn mint_sft<'c: 'info, 'info>(
     }
 
     Ok(())
-}
-
-fn find_limit(device_limits: &Vec<DeviceLimit>, target_device_type: u16) -> Option<f64> {
-    device_limits.iter()
-        .find(|&device_limit| device_limit.device_type == target_device_type)
-        .map(|device_limit| device_limit.limit)
 }
 
 #[derive(Accounts)]
@@ -257,7 +253,7 @@ pub struct MintSft<'info> {
     pub token_program: AccountInfo<'info>,
 
     /// CHECK:
-    system_program: Program<'info, System>,
+    pub system_program: Program<'info, System>,
 
     /// CHECK:
     #[account(address = IX_ID)]
@@ -268,6 +264,12 @@ pub struct MintSft<'info> {
 
     /// CHECK:
     pub ata_program: AccountInfo<'info>,
+}
+
+fn find_limit(device_limits: &Vec<DeviceLimit>, target_device_type: u16) -> Option<f64> {
+    device_limits.iter()
+        .find(|&device_limit| device_limit.device_type == target_device_type)
+        .map(|device_limit| device_limit.limit)
 }
 
 impl MintSftArgs {
