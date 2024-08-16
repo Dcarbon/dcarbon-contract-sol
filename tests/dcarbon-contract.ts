@@ -319,7 +319,7 @@ describe('dcarbon-contract', () => {
       const configArgs: ConfigArgs = {
         mintingFee: 0.1,
         rate: 0.1,
-        governanceAmount: 100_000,
+        governanceAmount: 100,
       };
 
       const tx = await program.methods
@@ -327,6 +327,7 @@ describe('dcarbon-contract', () => {
         .accounts({
           signer: anchorProvider.wallet.publicKey,
           mint: new PublicKey('f5p4t6kbLSH7zJnxg8fMcAh5aec5zgLBffkm5qP1koR'),
+          governanceMint: new PublicKey('Dy68XsAW2ihPTWE4PDwc8U2CADBbctUbJ7DoDHyuCnx9'),
         })
         .rpc({
           skipPreflight: true,
@@ -366,6 +367,15 @@ describe('dcarbon-contract', () => {
     xit('Register device', async () => {
       const projectId = getRandomU16();
       const deviceId = getRandomU16();
+
+      await program.methods
+        .setMintingLimit(1000, 50.1)
+        .accounts({
+          signer: upgradableAuthority.publicKey,
+        })
+        .rpc({
+          skipPreflight: true,
+        });
 
       const registerDeviceArgs: RegisterDeviceArgs = {
         projectId,
@@ -510,6 +520,136 @@ describe('dcarbon-contract', () => {
       const sig = await anchorProvider.sendAndConfirm(tx, [mint], { skipPreflight: true });
 
       console.log('Mint SFT: ', sig);
+    });
+
+    it('Claim DCarbon (Governance token)', async () => {
+      const { projectId, deviceId, owner } = await setupDevice();
+      console.log('ProjectId: ', projectId);
+      const mint = Keypair.generate();
+
+      console.log('Mint: ', mint.publicKey.toString());
+
+      const [metadata] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const createArgsVec: CreateArgsArgs = {
+        __kind: 'V1',
+        name: 'DCarbon Token',
+        symbol: 'DCPT',
+        uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
+        sellerFeeBasisPoints: percentAmount(5.5),
+        decimals: some(1),
+        creators: null,
+        tokenStandard: TokenStandard.FungibleAsset,
+      };
+
+      const serialize1 = getCreateArgsSerializer();
+      const data1 = serialize1.serialize(createArgsVec);
+
+      const ownerAta = associatedAddress({
+        mint: mint.publicKey,
+        owner: owner,
+      });
+
+      const mintSftArgs: MintSftArgs = {
+        projectId: projectId,
+        deviceId: deviceId,
+        createMintDataVec: Buffer.from(data1),
+        totalAmount: 2000,
+        nonce: 1,
+      };
+
+      const { ethAddress, message, signature, recoveryId } = prepareParams();
+      const eth_address = '4d0155c687739bce9440ffb8aba911b00b21ea56';
+      const test = ethers.utils.arrayify('0x' + eth_address);
+      const verifyMessageArgs: VerifyMessageArgs = {
+        msg: message,
+        recoveryId: recoveryId,
+        sig: Array.from(signature),
+        ethAddress: Array.from(test),
+      };
+
+      const [device] = PublicKey.findProgramAddressSync(
+        [Buffer.from('device'), Buffer.from(u16ToBytes(projectId)), Buffer.from(u16ToBytes(deviceId))],
+        program.programId,
+      );
+
+      const ins0 = anchor.web3.Secp256k1Program.createInstructionWithEthAddress({
+        ethAddress: ethAddress,
+        message: message,
+        signature: signature,
+        recoveryId: recoveryId,
+      });
+
+      const ins1 = await program.methods
+        .mintSft(mintSftArgs, verifyMessageArgs)
+        .accounts({
+          signer: anchorProvider.wallet.publicKey,
+          deviceOwner: owner,
+          ownerAta: ownerAta,
+          mint: mint.publicKey,
+          metadata: metadata,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+          ataProgram: ASSOCIATED_PROGRAM_ID,
+        })
+        .remainingAccounts([
+          {
+            pubkey: device,
+            isSigner: false,
+            isWritable: false,
+          },
+        ])
+        .signers([mint])
+        .instruction();
+
+      const tx = new Transaction().add(ins0).add(ins1);
+
+      const sig = await anchorProvider.sendAndConfirm(tx, [mint], { skipPreflight: true });
+
+      console.log('Mint SFT: ', sig);
+
+      const TOKEN = new PublicKey('Dy68XsAW2ihPTWE4PDwc8U2CADBbctUbJ7DoDHyuCnx9');
+
+      const tokenAtaReceiver = getAssociatedTokenAddressSync(TOKEN, owner);
+
+      const [authority] = PublicKey.findProgramAddressSync([Buffer.from('authority')], program.programId);
+
+      const tokenAtaSender = associatedAddress({
+        mint: TOKEN,
+        owner: authority,
+      });
+
+      const tokenAtaAccount = await connection.getAccountInfo(tokenAtaReceiver);
+
+      const txClaim = new Transaction();
+      txClaim.feePayer = owner;
+      txClaim.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+      if (!tokenAtaAccount || !tokenAtaAccount.lamports) {
+        txClaim.add(createAssociatedTokenAccountInstruction(owner, tokenAtaReceiver, owner, TOKEN));
+      }
+
+      // claim governance token
+      const claimTx = await program.methods
+        .claimGovernanceToken()
+        .accounts({
+          signer: owner,
+          tokenMint: TOKEN,
+          tokenAtaReceiver: tokenAtaReceiver,
+          tokenAtaSender: tokenAtaSender,
+        })
+        .instruction();
+
+      txClaim.add(claimTx);
+
+      const haha = await anchorProvider.sendAndConfirm(txClaim, [], {
+        skipPreflight: true,
+      });
+
+      console.log('Sig: ', haha);
     });
   });
 
@@ -987,6 +1127,7 @@ describe('dcarbon-contract', () => {
   });
 
   xit('Create mint', async () => {
+    console.log('Create mint');
     const createArgsVec: CreateArgsArgs = {
       __kind: 'V1',
       name: 'DCarbon Token',
@@ -999,7 +1140,6 @@ describe('dcarbon-contract', () => {
     };
 
     const mint = Keypair.generate();
-
     const serialize = getCreateArgsSerializer();
     const data = serialize.serialize(createArgsVec);
 
@@ -1424,6 +1564,15 @@ describe('dcarbon-contract', () => {
       owner: owner,
       minter: upgradableAuthority.publicKey,
     };
+
+    await program.methods
+      .setMintingLimit(1000, 50.1)
+      .accounts({
+        signer: upgradableAuthority.publicKey,
+      })
+      .rpc({
+        skipPreflight: true,
+      });
 
     const tx = await program.methods
       .registerDevice(registerDeviceArgs)

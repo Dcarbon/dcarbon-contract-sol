@@ -128,4 +128,12 @@ pub mod dcarbon_contract {
     ) -> Result<()> {
         instructions::mint_nft(ctx, uri, name, symbol, amount)
     }
+
+    pub fn claim_governance_token(ctx: Context<ClaimGovernanceToken>) -> Result<()> {
+        instructions::claim_governance_token(ctx)
+    }
+
+    pub fn claim_minting_fee(ctx: Context<ClaimMintingFee>) -> Result<()> {
+        instructions::claim_minting_fee(ctx)
+    }
 }

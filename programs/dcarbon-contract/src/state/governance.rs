@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 #[account]
 #[derive(Debug, InitSpace)]
 pub struct Governance {
+    pub mint: Pubkey,
     pub owner: Pubkey,
     pub amount: f64,
 }

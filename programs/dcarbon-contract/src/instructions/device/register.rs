@@ -80,7 +80,7 @@ impl RegisterDeviceArgs {
             return Err(DCarbonError::InvalidDeviceId.into());
         }
 
-        if let Some(device) = device_limit_vec.iter_mut().find(|d| d.device_type == self.device_type) {
+        if let Some(_) = device_limit_vec.iter_mut().find(|d| d.device_type == self.device_type) {
             Ok(())
         } else {
             return Err(DCarbonError::InvalidDeviceType.into());

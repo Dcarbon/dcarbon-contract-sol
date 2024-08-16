@@ -14,6 +14,7 @@ pub fn init_config(
 
     // amount without decimal
     governance.amount = config_args.governance_amount;
+    governance.mint = ctx.accounts.governance_mint.key();
 
     contract_config.assign(config_args, mint.key())
 }
@@ -47,11 +48,13 @@ pub struct InitConfig<'info> {
         space = 8 + Governance::INIT_SPACE,
         payer = signer,
         seeds = [Governance::PREFIX_SEED],
-        bump
+        bump,
     )]
     pub governance: Account<'info, Governance>,
 
     pub mint: Account<'info, Mint>,
+
+    pub governance_mint: Account<'info, Mint>,
 
     pub system_program: Program<'info, System>,
 }
