@@ -64,4 +64,5 @@ pub struct ConfigArgs {
     pub minting_fee: f64,
     pub rate: f64,
     pub governance_amount: f64,
+    pub vault: Pubkey,
 }
