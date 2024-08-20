@@ -14,8 +14,11 @@ import {
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
+  SystemProgram,
   SYSVAR_INSTRUCTIONS_PUBKEY,
   Transaction,
+  TransactionMessage,
+  VersionedTransaction,
 } from '@solana/web3.js';
 import { ASSOCIATED_PROGRAM_ID, associatedAddress, TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
 import { createAccount, getRandomU16, sleep, u16ToBytes } from './utils';
@@ -51,6 +54,9 @@ describe('dcarbon-contract', () => {
   const anchorProvider = program.provider as AnchorProvider;
   const connection = anchorProvider.connection;
   const upgradableAuthority = anchorProvider.wallet;
+  const payer = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY));
+
+  const vault = new PublicKey(process.env.VAULT);
 
   describe('🔑🔑🔑 Permission', async () => {
     xit('Init master', async () => {
@@ -320,6 +326,7 @@ describe('dcarbon-contract', () => {
         mintingFee: 0.1,
         rate: 0.1,
         governanceAmount: 100,
+        vault: vault,
       };
 
       const tx = await program.methods
@@ -364,6 +371,7 @@ describe('dcarbon-contract', () => {
   });
 
   describe('Device', () => {
+    const lookupTableAddress = new PublicKey('FK3zqpvK4oSn5mRxajtURvGBC94ZcADGeipUvhWVG4mu');
     xit('Register device', async () => {
       const projectId = getRandomU16();
       const deviceId = getRandomU16();
@@ -432,7 +440,7 @@ describe('dcarbon-contract', () => {
       console.log('Set active', tx2);
     });
 
-    xit('Mint sft', async () => {
+    it('Mint sft', async () => {
       const { projectId, deviceId, owner } = await setupDevice();
       console.log('ProjectId: ', projectId);
       const mint = Keypair.generate();
@@ -463,6 +471,11 @@ describe('dcarbon-contract', () => {
         owner: owner,
       });
 
+      const vaultAta = associatedAddress({
+        mint: mint.publicKey,
+        owner: vault,
+      });
+
       const mintSftArgs: MintSftArgs = {
         projectId: projectId,
         deviceId: deviceId,
@@ -472,7 +485,7 @@ describe('dcarbon-contract', () => {
       };
 
       const { ethAddress, message, signature, recoveryId } = prepareParams();
-      const eth_address = '4d0155c687739bce9440ffb8aba911b00b21ea56';
+      const eth_address = '28896aa71562249fdc985fd4711bbafc3d7d350c';
       const test = ethers.utils.arrayify('0x' + eth_address);
       const verifyMessageArgs: VerifyMessageArgs = {
         msg: message,
@@ -497,13 +510,13 @@ describe('dcarbon-contract', () => {
         .mintSft(mintSftArgs, verifyMessageArgs)
         .accounts({
           signer: anchorProvider.wallet.publicKey,
+          vaultAta: vaultAta,
           deviceOwner: owner,
+          vault: vault,
           ownerAta: ownerAta,
           mint: mint.publicKey,
           metadata: metadata,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-          ataProgram: ASSOCIATED_PROGRAM_ID,
+          sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
         })
         .remainingAccounts([
           {
@@ -515,14 +528,23 @@ describe('dcarbon-contract', () => {
         .signers([mint])
         .instruction();
 
-      const tx = new Transaction().add(ins0).add(ins1);
+      const lookupTableAccount = (await connection.getAddressLookupTable(lookupTableAddress)).value;
 
-      const sig = await anchorProvider.sendAndConfirm(tx, [mint], { skipPreflight: true });
+      const messageV0 = new TransactionMessage({
+        payerKey: upgradableAuthority.publicKey,
+        recentBlockhash: (await connection.getLatestBlockhash()).blockhash,
+        instructions: [ins0, ins1],
+      }).compileToV0Message([lookupTableAccount]);
+
+      const transaction = new VersionedTransaction(messageV0);
+      transaction.sign([payer, mint]);
+
+      const sig = await connection.sendRawTransaction(transaction.serialize());
 
       console.log('Mint SFT: ', sig);
     });
 
-    it('Claim DCarbon (Governance token)', async () => {
+    xit('Claim DCarbon (Governance token)', async () => {
       const { projectId, deviceId, owner } = await setupDevice();
       console.log('ProjectId: ', projectId);
       const mint = Keypair.generate();
@@ -591,9 +613,6 @@ describe('dcarbon-contract', () => {
           ownerAta: ownerAta,
           mint: mint.publicKey,
           metadata: metadata,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-          ataProgram: ASSOCIATED_PROGRAM_ID,
         })
         .remainingAccounts([
           {
@@ -1193,334 +1212,6 @@ describe('dcarbon-contract', () => {
     console.log('Create mint: ', tx);
   });
 
-  // xit('Mint SFT', async () => {
-  //
-  //     const {device, mint, metadata} = await registerProject()
-  //
-  //     const mintArgs: MintArgsArgs = {
-  //         __kind: "V1",
-  //         amount: 5,
-  //         authorizationData: null
-  //     }
-  //
-  //     const receiver = Keypair.generate()
-  //     console.log('Public Key: ', receiver.publicKey)
-  //     await createAccount({
-  //         provider: anchorProvider,
-  //         newAccountKeypair: receiver,
-  //         lamports: 0.1 * LAMPORTS_PER_SOL
-  //     })
-  //
-  //     const toAta = associatedAddress({
-  //         mint: mint.publicKey,
-  //         owner: receiver.publicKey
-  //     })
-  //
-  //     const serialize = getMintArgsSerializer()
-  //     const data = serialize.serialize(mintArgs)
-  //
-  //     const tx = await program.methods.mintSft(device.id, Buffer.from(data))
-  //         .accounts({
-  //             signer: anchorProvider.wallet.publicKey,
-  //             receiver: receiver.publicKey,
-  //             toAta,
-  //             mint: mint.publicKey,
-  //             metadata: metadata,
-  //             tokenProgram: TOKEN_PROGRAM_ID,
-  //             sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
-  //             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-  //             ataProgram: ASSOCIATED_PROGRAM_ID
-  //         })
-  //         .rpc({
-  //             skipPreflight: true
-  //         })
-  //
-  //     console.log('Mint SFT: ', tx)
-  // })
-  //
-  // xit('Transform SFT to FT', async () => {
-  //     const fungibleToken = new PublicKey('f5p4t6kbLSH7zJnxg8fMcAh5aec5zgLBffkm5qP1koR')
-  //
-  //     const {device, mint, metadata} = await registerProject()
-  //
-  //     const mintArgs: MintArgsArgs = {
-  //         __kind: "V1",
-  //         amount: 1,
-  //         authorizationData: null
-  //     }
-  //
-  //     const receiver = Keypair.generate()
-  //
-  //     await createAccount({
-  //         provider: anchorProvider,
-  //         newAccountKeypair: receiver,
-  //         lamports: 0.1 * LAMPORTS_PER_SOL
-  //     })
-  //
-  //     const toAta = associatedAddress({
-  //         mint: mint.publicKey,
-  //         owner: receiver.publicKey
-  //     })
-  //
-  //     const serialize = getMintArgsSerializer()
-  //     const data = serialize.serialize(mintArgs)
-  //
-  //     const tx = await program.methods.mintSft(device.id, Buffer.from(data))
-  //         .accounts({
-  //             signer: anchorProvider.wallet.publicKey,
-  //             receiver: receiver.publicKey,
-  //             toAta,
-  //             mint: mint.publicKey,
-  //             metadata: metadata,
-  //             tokenProgram: TOKEN_PROGRAM_ID,
-  //             sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
-  //             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-  //             ataProgram: ASSOCIATED_PROGRAM_ID
-  //         })
-  //         .rpc({
-  //             skipPreflight: true
-  //         })
-  //
-  //     console.log('Mint SFT: ', tx)
-  //
-  //     const burnArgs: BurnArgsArgs = {
-  //         __kind: 'V1',
-  //         amount: 1
-  //     }
-  //
-  //     const toAta2 = associatedAddress({
-  //         mint: fungibleToken,
-  //         owner: receiver.publicKey
-  //     })
-  //
-  //     const [metadataFt] = PublicKey.findProgramAddressSync(
-  //         [
-  //             Buffer.from('metadata'),
-  //             TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-  //             fungibleToken.toBuffer(),
-  //         ],
-  //         TOKEN_METADATA_PROGRAM_ID
-  //     );
-  //
-  //     const mintArgs2: MintArgsArgs = {
-  //         __kind: "V1",
-  //         amount: 10 ** 9,
-  //         authorizationData: null
-  //     }
-  //
-  //     const transformIns = await program.methods
-  //         .transform(Buffer.from(getBurnArgsSerializer().serialize(burnArgs)), Buffer.from(serialize.serialize(mintArgs2)))
-  //         .accounts({
-  //             signer: anchorProvider.wallet.publicKey,
-  //             receiver: receiver.publicKey,
-  //             burnAta: toAta,
-  //             toAta: toAta2,
-  //             mintSft: mint.publicKey,
-  //             mintFt: fungibleToken,
-  //             metadataSft: metadata,
-  //             metadataFt: metadataFt,
-  //             tokenProgram: TOKEN_PROGRAM_ID,
-  //             sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
-  //             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-  //             ataProgram: ASSOCIATED_PROGRAM_ID
-  //         })
-  //         .signers([receiver])
-  //         .instruction()
-  //
-  //     const transactionV0 = new Transaction().add(transformIns)
-  //
-  //     const sig = await anchorProvider.sendAndConfirm(transactionV0, [receiver], {
-  //         skipPreflight: true,
-  //     });
-  //
-  //     console.log('Transform SFT to FT: ', sig)
-  // })
-  //
-  // xit('Demo Register and Mint SFT', async () => {
-  //
-  //     const metadataPrj1 = {
-  //         name: 'Project 1',
-  //         symbol: 'PT1',
-  //         uri: "https://dev-bucket.kyupad.xyz/public/metadata/spl-token/metadata_project_1.json"
-  //     }
-  //
-  //     const metadataPrj2 = {
-  //         name: 'Project 2',
-  //         symbol: 'PT2',
-  //         uri: "https://dev-bucket.kyupad.xyz/public/metadata/spl-token/metadata_project_2.json"
-  //     }
-  //
-  //     const {device, mint, metadata} = await registerProject(metadataPrj1)
-  //     const {device: project2, mint: mint2, metadata: metadata2} = await registerProject(metadataPrj2)
-  //
-  //     const mintArgs: MintArgsArgs = {
-  //         __kind: "V1",
-  //         amount: 5,
-  //         authorizationData: null
-  //     }
-  //
-  //     const receiver = Keypair.fromSecretKey(bs58.decode(process.env.PROJECT_1_PRIVATE_KEY))
-  //
-  //     const toAta = associatedAddress({
-  //         mint: mint.publicKey,
-  //         owner: receiver.publicKey
-  //     })
-  //
-  //     const serialize = getMintArgsSerializer()
-  //     const data = serialize.serialize(mintArgs)
-  //
-  //     const tx = await program.methods.mintSft(device.id, Buffer.from(data))
-  //         .accounts({
-  //             signer: anchorProvider.wallet.publicKey,
-  //             receiver: receiver.publicKey,
-  //             toAta,
-  //             mint: mint.publicKey,
-  //             metadata: metadata,
-  //             tokenProgram: TOKEN_PROGRAM_ID,
-  //             sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
-  //             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-  //             ataProgram: ASSOCIATED_PROGRAM_ID
-  //         })
-  //         .rpc({
-  //             skipPreflight: true
-  //         })
-  //
-  //     console.log('Mint SFT Project 1: ', tx)
-  //
-  //     const toAta2 = associatedAddress({
-  //         mint: mint2.publicKey,
-  //         owner: receiver.publicKey
-  //     })
-  //
-  //     const tx2 = await program.methods.mintSft(project2.id, Buffer.from(data))
-  //         .accounts({
-  //             signer: anchorProvider.wallet.publicKey,
-  //             receiver: receiver.publicKey,
-  //             toAta: toAta2,
-  //             mint: mint2.publicKey,
-  //             metadata: metadata2,
-  //             tokenProgram: TOKEN_PROGRAM_ID,
-  //             sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
-  //             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-  //             ataProgram: ASSOCIATED_PROGRAM_ID
-  //         })
-  //         .rpc({
-  //             skipPreflight: true
-  //         })
-  //
-  //     console.log('Mint SFT Project 2: ', tx2)
-  // })
-  //
-  // xit('Demo burn', async () => {
-  //     const fungibleToken = new PublicKey('f5p4t6kbLSH7zJnxg8fMcAh5aec5zgLBffkm5qP1koR')
-  //     const receiver = Keypair.fromSecretKey(bs58.decode(process.env.PROJECT_1_PRIVATE_KEY))
-  //     const mint = new PublicKey("CCH2vkWhaqrmu59UrTyNSRwpYH8Y6msYN73mZ4FTovDv")
-  //     const mint2 = new PublicKey("89XTmi1C6ekJq2McK8UekGQcEhkaFCRw7uFt8PnSAXD3")
-  //
-  //     const [metadata] = PublicKey.findProgramAddressSync(
-  //         [
-  //             Buffer.from('metadata'),
-  //             TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-  //             mint.toBuffer(),
-  //         ],
-  //         TOKEN_METADATA_PROGRAM_ID
-  //     );
-  //
-  //     const [metadata2] = PublicKey.findProgramAddressSync(
-  //         [
-  //             Buffer.from('metadata'),
-  //             TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-  //             mint2.toBuffer(),
-  //         ],
-  //         TOKEN_METADATA_PROGRAM_ID
-  //     );
-  //
-  //     const burnAta = associatedAddress({
-  //         mint: mint,
-  //         owner: receiver.publicKey
-  //     })
-  //
-  //     const burnAta2 = associatedAddress({
-  //         mint: mint2,
-  //         owner: receiver.publicKey
-  //     })
-  //
-  //
-  //     const burnArgs: BurnArgsArgs = {
-  //         __kind: 'V1',
-  //         amount: 2
-  //     }
-  //
-  //     const toAta = associatedAddress({
-  //         mint: fungibleToken,
-  //         owner: receiver.publicKey
-  //     })
-  //
-  //     const [metadataFt] = PublicKey.findProgramAddressSync(
-  //         [
-  //             Buffer.from('metadata'),
-  //             TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-  //             fungibleToken.toBuffer(),
-  //         ],
-  //         TOKEN_METADATA_PROGRAM_ID
-  //     );
-  //
-  //     const mintArgs: MintArgsArgs = {
-  //         __kind: "V1",
-  //         amount: 2 * 10 ** 9,
-  //         authorizationData: null
-  //     }
-  //
-  //     const serialize = getMintArgsSerializer()
-  //
-  //     const transformIns = await program.methods
-  //         .transform(Buffer.from(getBurnArgsSerializer().serialize(burnArgs)), Buffer.from(serialize.serialize(mintArgs)))
-  //         .accounts({
-  //             signer: anchorProvider.wallet.publicKey,
-  //             receiver: receiver.publicKey,
-  //             burnAta: burnAta,
-  //             toAta: toAta,
-  //             mintSft: mint,
-  //             mintFt: fungibleToken,
-  //             metadataSft: metadata,
-  //             metadataFt: metadataFt,
-  //             tokenProgram: TOKEN_PROGRAM_ID,
-  //             sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
-  //             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-  //             ataProgram: ASSOCIATED_PROGRAM_ID
-  //         })
-  //         .signers([receiver])
-  //         .instruction()
-  //
-  //     const transformIns2 = await program.methods
-  //         .transform(Buffer.from(getBurnArgsSerializer().serialize(burnArgs)), Buffer.from(serialize.serialize(mintArgs)))
-  //         .accounts({
-  //             signer: anchorProvider.wallet.publicKey,
-  //             receiver: receiver.publicKey,
-  //             burnAta: burnAta2,
-  //             toAta: toAta,
-  //             mintSft: mint2,
-  //             mintFt: fungibleToken,
-  //             metadataSft: metadata2,
-  //             metadataFt: metadataFt,
-  //             tokenProgram: TOKEN_PROGRAM_ID,
-  //             sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
-  //             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-  //             ataProgram: ASSOCIATED_PROGRAM_ID
-  //         })
-  //         .signers([receiver])
-  //         .instruction()
-  //
-  //     const transactionV0 = new Transaction().add(transformIns)
-  //     // transactionV0.add(transformIns2)
-  //
-  //     const sig = await anchorProvider.sendAndConfirm(transactionV0, [receiver], {
-  //         skipPreflight: true,
-  //     });
-  //
-  //     console.log('Transform SFT to FT: ', sig)
-  // })
-
   xit('Create lookup Table', async () => {
     // Init lookup table adđress
     const slot = await anchorProvider.connection.getSlot();
@@ -1536,7 +1227,13 @@ describe('dcarbon-contract', () => {
       payer: anchorProvider.wallet.publicKey,
       authority: anchorProvider.wallet.publicKey,
       lookupTable: lookupTableAddress,
-      addresses: [TOKEN_PROGRAM_ID, SYSVAR_INSTRUCTIONS_PUBKEY, TOKEN_METADATA_PROGRAM_ID, ASSOCIATED_PROGRAM_ID],
+      addresses: [
+        TOKEN_PROGRAM_ID,
+        SYSVAR_INSTRUCTIONS_PUBKEY,
+        TOKEN_METADATA_PROGRAM_ID,
+        ASSOCIATED_PROGRAM_ID,
+        SystemProgram.programId,
+      ],
     });
 
     const createLookupTableTx = new Transaction().add(createLookupTableIns).add(extendInstruction);

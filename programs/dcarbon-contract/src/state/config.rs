@@ -14,6 +14,7 @@ pub struct ContractConfig {
     #[max_len(100)]
     pub minting_limits: Vec<DeviceLimit>,
     pub governance_amount: f64,
+    pub vault: Pubkey,
 }
 
 impl ContractConfig {
@@ -33,6 +34,7 @@ impl ContractConfig {
         self.governance_amount = config_args.governance_amount;
         self.mint = mint;
         self.minting_limits = Vec::new();
+        self.vault = config_args.vault;
         Ok(())
     }
 }

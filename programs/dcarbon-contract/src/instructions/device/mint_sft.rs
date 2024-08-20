@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
-use anchor_lang::solana_program::sysvar::instructions::{ID as IX_ID, load_instruction_at_checked};
+use anchor_lang::solana_program::sysvar::instructions::load_instruction_at_checked;
+use anchor_spl::token::Token;
+use anchor_spl::{associated_token::AssociatedToken, metadata::Metadata};
 use mpl_token_metadata::instructions::{CreateCpiBuilder, MintCpiBuilder};
 use mpl_token_metadata::types::{CreateArgs, MintArgs};
 
@@ -39,7 +41,7 @@ pub fn mint_sft<'c: 'info, 'info>(
     let authority = &ctx.accounts.authority;
     let device_status = &mut ctx.accounts.device_status;
     let contract_config = &ctx.accounts.contract_config;
-    let token_metadata_program = &ctx.accounts.token_metadata_program;
+    let token_metadassociated_token_program = &ctx.accounts.token_metadassociated_token_program;
     let governance = &mut ctx.accounts.governance;
     let owner_governance = &mut ctx.accounts.owner_governance;
     let device_owner = &ctx.accounts.device_owner;
@@ -81,7 +83,7 @@ pub fn mint_sft<'c: 'info, 'info>(
 
     // verify signature
     // Get what should be the Secp256k1Program instruction
-    let ix: Instruction = load_instruction_at_checked(0, &ctx.accounts.sysvar_program)?;
+    let ix: Instruction = load_instruction_at_checked(0, &ctx.accounts.sysvar_program.to_account_info())?;
 
     // Check that ix is what we expect to have been sent
     utils::verify_secp256k1_ix(&ix, &verify_message_args.eth_address, &verify_message_args.msg, &verify_message_args.sig, verify_message_args.recovery_id)?;
@@ -97,7 +99,7 @@ pub fn mint_sft<'c: 'info, 'info>(
     // create mint
     let create_data = CreateArgs::try_from_slice(&mint_sft_args.create_mint_data_vec).unwrap();
 
-    CreateCpiBuilder::new(token_metadata_program)
+    CreateCpiBuilder::new(token_metadassociated_token_program)
         .metadata(metadata)
         .master_edition(None)
         .mint(&mint.to_account_info(), true)
@@ -105,7 +107,7 @@ pub fn mint_sft<'c: 'info, 'info>(
         .payer(&signer.to_account_info())
         .update_authority(&authority.to_account_info(), true)
         .system_program(&system_program.to_account_info())
-        .sysvar_instructions(&ctx.accounts.sysvar_program)
+        .sysvar_instructions(&ctx.accounts.sysvar_program.to_account_info())
         .spl_token_program(Some(&token_program.to_account_info()))
         .create_args(create_data.clone())
         .invoke_signed(&[seeds_signer])?;
@@ -125,7 +127,7 @@ pub fn mint_sft<'c: 'info, 'info>(
                     authorization_data: None,
                 };
 
-                MintCpiBuilder::new(token_metadata_program)
+                MintCpiBuilder::new(token_metadassociated_token_program)
                     .token(&ctx.accounts.owner_ata)
                     .token_owner(Some(device_owner))
                     .metadata(metadata)
@@ -136,9 +138,9 @@ pub fn mint_sft<'c: 'info, 'info>(
                     .delegate_record(None)
                     .payer(&signer.to_account_info())
                     .system_program(&system_program.to_account_info())
-                    .sysvar_instructions(&ctx.accounts.sysvar_program)
+                    .sysvar_instructions(&ctx.accounts.sysvar_program.to_account_info())
                     .spl_token_program(token_program)
-                    .spl_ata_program(&ctx.accounts.ata_program)
+                    .spl_ata_program(&ctx.accounts.associated_token_program.to_account_info())
                     .authorization_rules(None)
                     .authorization_rules_program(None)
                     .mint_args(mint_data.clone())
@@ -147,22 +149,55 @@ pub fn mint_sft<'c: 'info, 'info>(
                 // increase fee amount
                 let claim = &mut ctx.accounts.claim;
                 claim.mint = mint.key();
-                claim.amount += minting_fee;
                 claim.project_id = mint_sft_args.project_id;
 
-                let governance_amount = amount as f64 * contract_config.rate;
+                let mut governance_amount = amount as f64 * contract_config.rate;
 
                 // increase dCarbon
-                if governance.amount > 0.0 && governance.amount >= governance_amount {
+                if governance.amount > 0.0 {
+                    
+                    // check if governance_amount is higher than governance.amount
+                    if governance_amount > governance.amount {
+                        governance_amount = governance.amount
+                    }
+                    
                     governance.amount -= governance_amount;
                     owner_governance.amount += governance_amount;
                     owner_governance.owner = device_owner.key();
                     owner_governance.mint = governance.mint;
+                    
+                    // calculate total governance_amount
+                    claim.amount += governance_amount;
                 }
 
                 // increase
                 device_status.nonce += 1;
                 device_status.last_mint_time = current_timestamp;
+
+                // mint for vault
+                let mint_data_vault = MintArgs::V1 {
+                    amount: (minting_fee * 10f64.powf(decimals as f64)) as u64,
+                    authorization_data: None,
+                };
+
+                MintCpiBuilder::new(token_metadassociated_token_program)
+                    .token(&ctx.accounts.vault_ata)
+                    .token_owner(Some(&ctx.accounts.vault))
+                    .metadata(metadata)
+                    .master_edition(None)
+                    .token_record(None)
+                    .mint(&mint.to_account_info())
+                    .authority(authority)
+                    .delegate_record(None)
+                    .payer(&signer.to_account_info())
+                    .system_program(&system_program.to_account_info())
+                    .sysvar_instructions(&ctx.accounts.sysvar_program.to_account_info())
+                    .spl_token_program(token_program)
+                    .spl_ata_program(&ctx.accounts.associated_token_program.to_account_info())
+                    .authorization_rules(None)
+                    .authorization_rules_program(None)
+                    .mint_args(mint_data_vault.clone())
+                    .invoke_signed(&[seeds_signer])?;
 
                 msg!("mintinfo_{}_{}_{}_{}_{}_{}", mint_sft_args.project_id, mint_sft_args.device_id, mint_sft_args.nonce, minting_amount, minting_fee, governance_amount);
             }
@@ -170,22 +205,17 @@ pub fn mint_sft<'c: 'info, 'info>(
         }
     }
 
+    // mint sft-fee for admin
+
     Ok(())
 }
 
 #[derive(Accounts)]
 #[instruction(mint_sft_args: MintSftArgs)]
 pub struct MintSft<'info> {
-    #[account(
-        mut,
-    // constraint = signer.key() == device.minter,
-    )]
+    #[account(mut)]
     pub signer: Signer<'info>,
 
-    /// CHECK:
-    #[account(
-    // constraint = device_owner.key() == device.owner
-    )]
     pub device_owner: AccountInfo<'info>,
 
     #[account(
@@ -198,6 +228,7 @@ pub struct MintSft<'info> {
     pub owner_governance: Box<Account<'info, Governance>>,
 
     #[account(
+        mut,
         seeds = [Governance::PREFIX_SEED],
         bump,
         owner = ID
@@ -226,6 +257,14 @@ pub struct MintSft<'info> {
     pub owner_ata: AccountInfo<'info>,
 
     #[account(
+        constraint = vault.key() == contract_config.vault,
+    )]
+    pub vault: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub vault_ata: AccountInfo<'info>,
+
+    #[account(
         mut,
         seeds = [DeviceStatus::PREFIX_SEED, & mint_sft_args.device_id.to_le_bytes()],
         bump,
@@ -249,21 +288,12 @@ pub struct MintSft<'info> {
     #[account(mut)]
     pub metadata: AccountInfo<'info>,
 
-    /// CHECK:
-    pub token_program: AccountInfo<'info>,
-
-    /// CHECK:
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
-
-    /// CHECK:
-    #[account(address = IX_ID)]
+    /// CHECK: 
     pub sysvar_program: AccountInfo<'info>,
-
-    /// CHECK:
-    pub token_metadata_program: AccountInfo<'info>,
-
-    /// CHECK:
-    pub ata_program: AccountInfo<'info>,
+    pub token_metadassociated_token_program: Program<'info, Metadata>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 fn find_limit(device_limits: &Vec<DeviceLimit>, target_device_type: u16) -> Option<f64> {
