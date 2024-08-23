@@ -84,8 +84,8 @@ pub mod dcarbon_contract {
         instructions::mint_sft(ctx, mint_sft_args, verify_message_args)
     }
 
-    pub fn swap_sft(ctx: Context<SwapSft>, burn_data_vec: Vec<u8>, mint_data_vec: Vec<u8>) -> Result<()> {
-        instructions::swap_sft(ctx, burn_data_vec, mint_data_vec)
+    pub fn swap_sft(ctx: Context<SwapSft>, burn_amount: f64) -> Result<()> {
+        instructions::swap_sft(ctx, burn_amount)
     }
 
     pub fn listing<'c: 'info, 'info>(

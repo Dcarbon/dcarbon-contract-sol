@@ -440,7 +440,7 @@ describe('dcarbon-contract', () => {
       console.log('Set active', tx2);
     });
 
-    it('Mint sft', async () => {
+    xit('Mint sft', async () => {
       const { projectId, deviceId, owner } = await setupDevice();
       console.log('ProjectId: ', projectId);
       const mint = Keypair.generate();
@@ -669,6 +669,163 @@ describe('dcarbon-contract', () => {
       });
 
       console.log('Sig: ', haha);
+    });
+
+    it('Swap sft', async () => {
+      const { projectId, deviceId, owner } = await setupDevice();
+      console.log('ProjectId: ', projectId);
+      const mint = Keypair.generate();
+
+      console.log('Mint: ', mint.publicKey.toString());
+
+      const [metadata] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const createArgsVec: CreateArgsArgs = {
+        __kind: 'V1',
+        name: 'DCarbon Token',
+        symbol: 'DCPT',
+        uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
+        sellerFeeBasisPoints: percentAmount(5.5),
+        decimals: some(1),
+        creators: null,
+        tokenStandard: TokenStandard.FungibleAsset,
+      };
+
+      const serialize1 = getCreateArgsSerializer();
+      const data1 = serialize1.serialize(createArgsVec);
+
+      const ownerAta = associatedAddress({
+        mint: mint.publicKey,
+        owner: owner,
+      });
+
+      const vaultAta = associatedAddress({
+        mint: mint.publicKey,
+        owner: vault,
+      });
+
+      const mintSftArgs: MintSftArgs = {
+        projectId: projectId,
+        deviceId: deviceId,
+        createMintDataVec: Buffer.from(data1),
+        totalAmount: 2000,
+        nonce: 1,
+      };
+
+      const { ethAddress, message, signature, recoveryId } = prepareParams();
+      const eth_address = '4d0155c687739bce9440ffb8aba911b00b21ea56';
+      const test = ethers.utils.arrayify('0x' + eth_address);
+      const verifyMessageArgs: VerifyMessageArgs = {
+        msg: message,
+        recoveryId: recoveryId,
+        sig: Array.from(signature),
+        ethAddress: Array.from(test),
+      };
+
+      const [device] = PublicKey.findProgramAddressSync(
+        [Buffer.from('device'), Buffer.from(u16ToBytes(projectId)), Buffer.from(u16ToBytes(deviceId))],
+        program.programId,
+      );
+
+      const ins0 = anchor.web3.Secp256k1Program.createInstructionWithEthAddress({
+        ethAddress: ethAddress,
+        message: message,
+        signature: signature,
+        recoveryId: recoveryId,
+      });
+
+      const ins1 = await program.methods
+        .mintSft(mintSftArgs, verifyMessageArgs)
+        .accounts({
+          signer: anchorProvider.wallet.publicKey,
+          vaultAta: vaultAta,
+          deviceOwner: owner,
+          vault: vault,
+          ownerAta: ownerAta,
+          mint: mint.publicKey,
+          metadata: metadata,
+          sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
+        })
+        .remainingAccounts([
+          {
+            pubkey: device,
+            isSigner: false,
+            isWritable: false,
+          },
+        ])
+        .signers([mint])
+        .instruction();
+
+      const lookupTableAccount = (await connection.getAddressLookupTable(lookupTableAddress)).value;
+
+      const messageV0 = new TransactionMessage({
+        payerKey: upgradableAuthority.publicKey,
+        recentBlockhash: (await connection.getLatestBlockhash()).blockhash,
+        instructions: [ins0, ins1],
+      }).compileToV0Message([lookupTableAccount]);
+
+      const transaction = new VersionedTransaction(messageV0);
+      transaction.sign([payer, mint]);
+
+      const sig = await connection.sendRawTransaction(transaction.serialize());
+      console.log('Mint SFT: ', sig);
+
+      const mintFt = new PublicKey('3ZqEW87VxgjKu6G4r9TmauYRV7pJ6xm5ayWRT3WMPz6Y');
+
+      const [metadataFt] = PublicKey.findProgramAddressSync(
+        [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mintFt.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID,
+      );
+
+      const toAta = getAssociatedTokenAddressSync(mintFt, owner);
+      const checkToAta = await connection.getAccountInfo(toAta);
+
+      const txSwapIns = await program.methods
+        .swapSft(2)
+        .accounts({
+          signer: upgradableAuthority.publicKey,
+          burnAta: ownerAta,
+          toAta,
+          mintSft: mint.publicKey,
+          mintFt: mintFt,
+          metadataSft: metadata,
+          metadataFt: metadataFt,
+          sysvarProgram: SYSVAR_INSTRUCTIONS_PUBKEY,
+        })
+        .instruction();
+
+      const tx = new Transaction();
+      if (!checkToAta) {
+        const createToAtaIns = createAssociatedTokenAccountInstruction(
+          upgradableAuthority.publicKey,
+          toAta,
+          owner,
+          mintFt,
+        );
+        tx.add(createToAtaIns);
+      }
+      tx.add(txSwapIns);
+      tx.feePayer = upgradableAuthority.publicKey;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+      const sig_1 = await anchorProvider.sendAndConfirm(tx, [], {
+        skipPreflight: true,
+      });
+
+      // const messageV0_1 = new TransactionMessage({
+      //   payerKey: upgradableAuthority.publicKey,
+      //   recentBlockhash: (await connection.getLatestBlockhash()).blockhash,
+      //   instructions: [createToAtaIns, txSwapIns],
+      // }).compileToV0Message();
+
+      // const transaction_1 = new VersionedTransaction(messageV0_1);
+      // transaction.sign([payer]);
+
+      // const sig_1 = await connection.sendRawTransaction(transaction_1.serialize());
+      console.log('Tx swap: ', sig_1);
     });
   });
 

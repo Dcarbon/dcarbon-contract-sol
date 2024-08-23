@@ -151,7 +151,7 @@ pub fn mint_sft<'c: 'info, 'info>(
                 claim.mint = mint.key();
                 claim.project_id = mint_sft_args.project_id;
 
-                let mut governance_amount = amount as f64 * contract_config.rate;
+                let mut governance_amount = amount * contract_config.rate;
 
                 // increase dCarbon
                 if governance.amount > 0.0 {
