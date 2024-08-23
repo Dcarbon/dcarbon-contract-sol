@@ -1,9 +1,13 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::metadata::Metadata;
+use anchor_spl::token::{Mint, Token, TokenAccount};
 use mpl_token_metadata::instructions::{BurnCpiBuilder, MintCpiBuilder};
 use mpl_token_metadata::types::{BurnArgs, MintArgs};
+use crate::state::ContractConfig;
 use crate::ID;
 
-pub fn swap_sft(ctx: Context<SwapSft>, burn_data_vec: Vec<u8>, mint_data_vec: Vec<u8>) -> Result<()> {
+pub fn swap_sft(ctx: Context<SwapSft>, burn_amount: f64) -> Result<()> {
     let mint_sft = &ctx.accounts.mint_sft;
     let mint_ft = &ctx.accounts.mint_ft;
     let signer = &ctx.accounts.signer;
@@ -22,7 +26,7 @@ pub fn swap_sft(ctx: Context<SwapSft>, burn_data_vec: Vec<u8>, mint_data_vec: Ve
     let binding = [bump];
     seeds_signer.push(&binding);
 
-    let burn_data = BurnArgs::try_from_slice(&burn_data_vec).unwrap();
+    let burn_data = BurnArgs::V1 { amount: (burn_amount * 10f64.powf(mint_sft.decimals as f64)) as u64 };
 
     // check authority of mint
 
@@ -33,7 +37,7 @@ pub fn swap_sft(ctx: Context<SwapSft>, burn_data_vec: Vec<u8>, mint_data_vec: Ve
         .metadata(metadata_sft)
         .edition(None)
         .mint(&mint_sft.to_account_info())
-        .token(&ctx.accounts.burn_ata)
+        .token(&ctx.accounts.burn_ata.to_account_info())
         .master_edition(None)
         .master_edition_mint(None)
         .master_edition_token(None)
@@ -45,11 +49,11 @@ pub fn swap_sft(ctx: Context<SwapSft>, burn_data_vec: Vec<u8>, mint_data_vec: Ve
         .burn_args(burn_data)
         .invoke_signed(&[seeds_signer])?;
 
-    let mint_data = MintArgs::try_from_slice(&mint_data_vec).unwrap();
+    let mint_data = MintArgs::V1 { amount: (burn_amount * 10f64.powf(mint_ft.decimals as f64)) as u64, authorization_data: None };
 
     // Mint token for user
     MintCpiBuilder::new(&token_metadata_program)
-        .token(&ctx.accounts.to_ata)
+        .token(&ctx.accounts.to_ata.to_account_info())
         .token_owner(Some(&ctx.accounts.signer))
         .metadata(metadata_ft)
         .master_edition(None)
@@ -75,21 +79,43 @@ pub struct SwapSft<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(mut)]
-    /// CHECK:
-    pub burn_ata: AccountInfo<'info>,
+    #[account(
+        seeds = [ContractConfig::PREFIX_SEED],
+        bump,
+        owner = ID, 
+    )]
+    pub contract_config: Account<'info, ContractConfig>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = burn_ata.mint == mint_sft.key(),
+        constraint = burn_ata.owner == signer.key()
+    )]
     /// CHECK:
-    pub to_ata: AccountInfo<'info>,
+    pub burn_ata: Box<Account<'info, TokenAccount>>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = to_ata.mint == mint_ft.key(),
+        constraint = to_ata.owner == signer.key()
+    )]
     /// CHECK:
-    pub mint_sft: AccountInfo<'info>,
+    pub to_ata: Box<Account<'info, TokenAccount>>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = mint_sft.mint_authority.unwrap() == authority.key(),
+    )]
     /// CHECK:
-    pub mint_ft: AccountInfo<'info>,
+    pub mint_sft: Box<Account<'info, Mint>>,
+
+    #[account(
+        mut,
+        constraint = mint_ft.mint_authority.unwrap() == authority.key(),
+        constraint = mint_ft.key() == contract_config.mint,
+    )]
+    /// CHECK:
+    pub mint_ft: Box<Account<'info, Mint>>,
 
     /// CHECK:
     #[account(mut)]
@@ -109,7 +135,7 @@ pub struct SwapSft<'info> {
     pub authority: AccountInfo<'info>,
 
     /// CHECK:
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 
     pub system_program: Program<'info, System>,
 
@@ -117,8 +143,8 @@ pub struct SwapSft<'info> {
     pub sysvar_program: AccountInfo<'info>,
 
     /// CHECK:
-    pub token_metadata_program: AccountInfo<'info>,
+    pub token_metadata_program: Program<'info, Metadata>,
 
     /// CHECK:
-    pub ata_program: AccountInfo<'info>,
+    pub ata_program: Program<'info, AssociatedToken>,
 }
