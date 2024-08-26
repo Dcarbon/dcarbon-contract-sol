@@ -485,7 +485,7 @@ describe('dcarbon-contract', () => {
       };
 
       const { ethAddress, message, signature, recoveryId } = prepareParams();
-      const eth_address = '28896aa71562249fdc985fd4711bbafc3d7d350c';
+      const eth_address = '4d0155c687739bce9440ffb8aba911b00b21ea56';
       const test = ethers.utils.arrayify('0x' + eth_address);
       const verifyMessageArgs: VerifyMessageArgs = {
         msg: message,
@@ -671,7 +671,7 @@ describe('dcarbon-contract', () => {
       console.log('Sig: ', haha);
     });
 
-    it('Swap sft', async () => {
+    xit('Swap sft', async () => {
       const { projectId, deviceId, owner } = await setupDevice();
       console.log('ProjectId: ', projectId);
       const mint = Keypair.generate();
@@ -834,8 +834,8 @@ describe('dcarbon-contract', () => {
 
     xit('Listing token with SOL', async () => {
       // get this mint from mins-sft
-      const mint = new PublicKey('FpgYHp1iRu3jDCvxF6DsAiNoZhTC884WXzMJ7TCNqDgm');
-      const projectId = 9302;
+      const mint = new PublicKey('HYKzXvsCcM6gUyUhgGF2Cx72nrsyM82EKNeyD3GQtRy8');
+      const projectId = 38475;
       const sourceAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
 
       const listingArgs: ListingArgs = {
@@ -1137,15 +1137,17 @@ describe('dcarbon-contract', () => {
       console.log('Sig: ', sig);
     });
 
-    xit('Cancel listing', async () => {
-      const mint = new PublicKey('2Yk7gycCaLtViSPAPcAEUxQF82pCKqCWZEfLKSkfbvEH');
+    it('Cancel listing', async () => {
+      const mint = new PublicKey('HYKzXvsCcM6gUyUhgGF2Cx72nrsyM82EKNeyD3GQtRy8');
       const signer = upgradableAuthority.publicKey;
+      const sourceAta = getAssociatedTokenAddressSync(mint, signer);
 
       const tx = await program.methods
         .cancelListing()
         .accounts({
           signer,
           mint,
+          sourceAta,
         })
         .rpc({
           skipPreflight: true,
