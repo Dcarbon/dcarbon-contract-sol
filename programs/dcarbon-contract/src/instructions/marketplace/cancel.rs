@@ -27,6 +27,8 @@ pub struct CancelListing<'info> {
 
     #[account(
         mut,
+        seeds = [TokenListingInfo::PREFIX_SEED, signer.key().as_ref(), mint.key().as_ref()],
+        bump,
         close = signer
     )]
     pub token_listing_info: Box<Account<'info, TokenListingInfo>>,
