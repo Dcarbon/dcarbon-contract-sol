@@ -834,8 +834,8 @@ describe('dcarbon-contract', () => {
 
     xit('Listing token with SOL', async () => {
       // get this mint from mins-sft
-      const mint = new PublicKey('52dLqCUKBXKv3wNmcWped9sw8KnRuzxZacZhfYFJ6wJa');
-      const projectId = 49054;
+      const mint = new PublicKey('HYKzXvsCcM6gUyUhgGF2Cx72nrsyM82EKNeyD3GQtRy8');
+      const projectId = 38475;
       const sourceAta = getAssociatedTokenAddressSync(mint, upgradableAuthority.publicKey);
 
       const listingArgs: ListingArgs = {
@@ -1138,14 +1138,16 @@ describe('dcarbon-contract', () => {
     });
 
     it('Cancel listing', async () => {
-      const mint = new PublicKey('52dLqCUKBXKv3wNmcWped9sw8KnRuzxZacZhfYFJ6wJa');
+      const mint = new PublicKey('HYKzXvsCcM6gUyUhgGF2Cx72nrsyM82EKNeyD3GQtRy8');
       const signer = upgradableAuthority.publicKey;
+      const sourceAta = getAssociatedTokenAddressSync(mint, signer);
 
       const tx = await program.methods
         .cancelListing()
         .accounts({
           signer,
           mint,
+          sourceAta,
         })
         .rpc({
           skipPreflight: true,
