@@ -15,7 +15,6 @@ pub fn cancel_listing(ctx: Context<CancelListing>) -> Result<()> {
 }
 
 #[derive(Accounts)]
-#[instruction(_nonce: u32)]
 pub struct CancelListing<'info> {
     #[account(
         mut,
