@@ -123,7 +123,7 @@ pub fn mint_sft<'c: 'info, 'info>(
 
                 // mint for owner
                 let mint_data = MintArgs::V1 {
-                    amount: (minting_amount * 10f64.powf(decimals as f64)) as u64,
+                    amount: (minting_amount * 10f64.powf(decimals as f64)).round() as u64,
                     authorization_data: None,
                 };
 
@@ -176,7 +176,7 @@ pub fn mint_sft<'c: 'info, 'info>(
 
                 // mint for vault
                 let mint_data_vault = MintArgs::V1 {
-                    amount: (minting_fee * 10f64.powf(decimals as f64)) as u64,
+                    amount: (minting_fee * 10f64.powf(decimals as f64)).round() as u64,
                     authorization_data: None,
                 };
 

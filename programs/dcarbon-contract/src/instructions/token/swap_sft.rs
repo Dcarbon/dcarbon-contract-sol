@@ -26,7 +26,7 @@ pub fn swap_sft(ctx: Context<SwapSft>, burn_amount: f64) -> Result<()> {
     let binding = [bump];
     seeds_signer.push(&binding);
 
-    let burn_data = BurnArgs::V1 { amount: (burn_amount * 10f64.powf(mint_sft.decimals as f64)) as u64 };
+    let burn_data = BurnArgs::V1 { amount: (burn_amount * 10f64.powf(mint_sft.decimals as f64)).round() as u64 };
 
     // check authority of mint
 
@@ -49,7 +49,7 @@ pub fn swap_sft(ctx: Context<SwapSft>, burn_amount: f64) -> Result<()> {
         .burn_args(burn_data)
         .invoke_signed(&[seeds_signer])?;
 
-    let mint_data = MintArgs::V1 { amount: (burn_amount * 10f64.powf(mint_ft.decimals as f64)) as u64, authorization_data: None };
+    let mint_data = MintArgs::V1 { amount: (burn_amount * 10f64.powf(mint_ft.decimals as f64)).round() as u64, authorization_data: None };
 
     // Mint token for user
     MintCpiBuilder::new(&token_metadata_program)

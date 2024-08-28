@@ -36,7 +36,7 @@ pub fn claim_governance_token(ctx: Context<ClaimGovernanceToken>) -> Result<()> 
         bind,
     );
 
-    transfer(cpi_ctx, (governance.amount * 10f64.powf(token_mint.decimals as f64)) as u64)?;
+    transfer(cpi_ctx, (governance.amount * 10f64.powf(token_mint.decimals as f64)).round() as u64)?;
 
     governance.amount = 0.0;
 

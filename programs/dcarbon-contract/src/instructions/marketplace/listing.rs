@@ -43,7 +43,7 @@ pub fn listing<'c: 'info, 'info>(
         delegate.key,
         signer.key,
         &[],
-        (delegate_amount * 10f64.powf(mint.decimals as f64)) as u64,
+        (delegate_amount * 10f64.powf(mint.decimals as f64)).round() as u64,
         mint.decimals,
     )?;
 

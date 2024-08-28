@@ -77,7 +77,7 @@ pub fn buy<'c: 'info, 'info>(
                     &destination.key(),
                     signer.key,
                     &[],
-                    (fee_amount * 10f64.powf(mint_data.decimals as f64)) as u64,
+                    (fee_amount * 10f64.powf(mint_data.decimals as f64)).round() as u64,
                     mint_data.decimals,
                 )
                     .unwrap(),
@@ -115,7 +115,7 @@ pub fn buy<'c: 'info, 'info>(
         to_ata.key,
         delegate.key,
         &[],
-        (amount * 10f64.powf(mint.decimals as f64)) as u64,
+        (amount * 10f64.powf(mint.decimals as f64)).round() as u64,
         mint.decimals)?;
 
     invoke_signed(

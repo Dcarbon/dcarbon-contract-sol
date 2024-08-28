@@ -28,7 +28,7 @@ pub fn burn_sft(ctx: Context<BurnSft>, amount: f64) -> Result<()> {
     }
 
     let burn_data = BurnArgs::V1 {
-        amount: (amount * 10f64.powf(mint_sft.decimals as f64)) as u64
+        amount: (amount * 10f64.powf(mint_sft.decimals as f64)).round() as u64
     };
 
     let seeds: &[&[u8]] = &[b"authority"];
