@@ -2,9 +2,9 @@ use anchor_lang::prelude::*;
 
 use instructions::*;
 
-mod state;
-mod instructions;
 mod error;
+mod instructions;
+mod state;
 mod utils;
 
 declare_id!("75eELePzbpEwD1tAEvYna5ZJtC26GeU42uF3ycyyTCt2");
@@ -45,10 +45,7 @@ pub mod dcarbon_contract {
         instructions::create_ft(ctx, create_ft_args)
     }
 
-    pub fn init_config(
-        ctx: Context<InitConfig>,
-        config_args: ConfigArgs,
-    ) -> Result<()> {
+    pub fn init_config(ctx: Context<InitConfig>, config_args: ConfigArgs) -> Result<()> {
         instructions::init_config(ctx, config_args)
     }
 
@@ -68,7 +65,10 @@ pub mod dcarbon_contract {
         instructions::set_coefficient(ctx, key, value)
     }
 
-    pub fn register_device(ctx: Context<RegisterDevice>, register_device_args: RegisterDeviceArgs) -> Result<()> {
+    pub fn register_device(
+        ctx: Context<RegisterDevice>,
+        register_device_args: RegisterDeviceArgs,
+    ) -> Result<()> {
         instructions::register_device(ctx, register_device_args)
     }
 

@@ -14,7 +14,6 @@ impl Coefficient {
     pub const PREFIX_SEED: &'static [u8] = b"coefficient";
 
     pub fn validate(&self, key: String, value: u64) -> Result<()> {
-
         // check value
         if value <= 0 {
             return Err(DCarbonError::InvalidValue.into());

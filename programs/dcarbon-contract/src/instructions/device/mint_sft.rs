@@ -6,10 +6,10 @@ use anchor_spl::{associated_token::AssociatedToken, metadata::Metadata};
 use mpl_token_metadata::instructions::{CreateCpiBuilder, MintCpiBuilder};
 use mpl_token_metadata::types::{CreateArgs, MintArgs};
 
-use crate::*;
 use crate::error::DCarbonError;
 use crate::state::{Claim, ContractConfig, Device, DeviceLimit, DeviceStatus, Governance};
 use crate::utils::assert_keys_equal;
+use crate::*;
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct MintSftArgs {
@@ -83,10 +83,17 @@ pub fn mint_sft<'c: 'info, 'info>(
 
     // verify signature
     // Get what should be the Secp256k1Program instruction
-    let ix: Instruction = load_instruction_at_checked(0, &ctx.accounts.sysvar_program.to_account_info())?;
+    let ix: Instruction =
+        load_instruction_at_checked(0, &ctx.accounts.sysvar_program.to_account_info())?;
 
     // Check that ix is what we expect to have been sent
-    utils::verify_secp256k1_ix(&ix, &verify_message_args.eth_address, &verify_message_args.msg, &verify_message_args.sig, verify_message_args.recovery_id)?;
+    utils::verify_secp256k1_ix(
+        &ix,
+        &verify_message_args.eth_address,
+        &verify_message_args.msg,
+        &verify_message_args.sig,
+        verify_message_args.recovery_id,
+    )?;
 
     let seeds: &[&[u8]] = &[b"authority"];
 
@@ -111,7 +118,6 @@ pub fn mint_sft<'c: 'info, 'info>(
         .spl_token_program(Some(&token_program.to_account_info()))
         .create_args(create_data.clone())
         .invoke_signed(&[seeds_signer])?;
-
 
     let CreateArgs::V1 { decimals, .. } = create_data.clone();
     {
@@ -155,17 +161,16 @@ pub fn mint_sft<'c: 'info, 'info>(
 
                 // increase dCarbon
                 if governance.amount > 0.0 {
-                    
                     // check if governance_amount is higher than governance.amount
                     if governance_amount > governance.amount {
                         governance_amount = governance.amount
                     }
-                    
+
                     governance.amount -= governance_amount;
                     owner_governance.amount += governance_amount;
                     owner_governance.owner = device_owner.key();
                     owner_governance.mint = governance.mint;
-                    
+
                     // calculate total governance_amount
                     claim.amount += governance_amount;
                 }
@@ -199,7 +204,15 @@ pub fn mint_sft<'c: 'info, 'info>(
                     .mint_args(mint_data_vault.clone())
                     .invoke_signed(&[seeds_signer])?;
 
-                msg!("mintinfo_{}_{}_{}_{}_{}_{}", mint_sft_args.project_id, mint_sft_args.device_id, mint_sft_args.nonce, minting_amount, minting_fee, governance_amount);
+                msg!(
+                    "mintinfo_{}_{}_{}_{}_{}_{}",
+                    mint_sft_args.project_id,
+                    mint_sft_args.device_id,
+                    mint_sft_args.nonce,
+                    minting_amount,
+                    minting_fee,
+                    governance_amount
+                );
             }
             None => {}
         }
@@ -290,14 +303,15 @@ pub struct MintSft<'info> {
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
-    /// CHECK: 
+    /// CHECK:
     pub sysvar_program: AccountInfo<'info>,
     pub token_metadassociated_token_program: Program<'info, Metadata>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 fn find_limit(device_limits: &Vec<DeviceLimit>, target_device_type: u16) -> Option<f64> {
-    device_limits.iter()
+    device_limits
+        .iter()
         .find(|&device_limit| device_limit.device_type == target_device_type)
         .map(|device_limit| device_limit.limit)
 }

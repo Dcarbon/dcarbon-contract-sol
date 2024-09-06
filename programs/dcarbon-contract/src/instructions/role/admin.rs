@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
-use crate::ID;
 use crate::state::{Admin, Master};
+use crate::ID;
 
 pub fn add_admin<'c: 'info, 'info>(
     ctx: Context<'_, '_, 'c, 'info, AddAdmin<'info>>,
@@ -14,7 +14,12 @@ pub fn add_admin<'c: 'info, 'info>(
 
     let admin = next_account_info(remaining_accounts_iter).unwrap();
 
-    Admin::init(admin, signer.to_account_info(), system_program.to_account_info(), address)
+    Admin::init(
+        admin,
+        signer.to_account_info(),
+        system_program.to_account_info(),
+        address,
+    )
 }
 
 pub fn delete_admin(_ctx: Context<DeleteAdmin>, _address: Pubkey) -> Result<()> {

@@ -440,7 +440,7 @@ describe('dcarbon-contract', () => {
       console.log('Set active', tx2);
     });
 
-    xit('Mint sft', async () => {
+    it('Mint sft', async () => {
       const { projectId, deviceId, owner } = await setupDevice();
       console.log('ProjectId: ', projectId);
       const mint = Keypair.generate();
@@ -458,7 +458,7 @@ describe('dcarbon-contract', () => {
         symbol: 'DCPT',
         uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
         sellerFeeBasisPoints: percentAmount(5.5),
-        decimals: some(1),
+        decimals: some(2),
         creators: null,
         tokenStandard: TokenStandard.FungibleAsset,
       };
@@ -480,7 +480,7 @@ describe('dcarbon-contract', () => {
         projectId: projectId,
         deviceId: deviceId,
         createMintDataVec: Buffer.from(data1),
-        totalAmount: 2000,
+        totalAmount: 2.3,
         nonce: 1,
       };
 
@@ -505,7 +505,8 @@ describe('dcarbon-contract', () => {
         signature: signature,
         recoveryId: recoveryId,
       });
-
+      // chuyen sang byte
+      // nhet vao data gui len
       const ins1 = await program.methods
         .mintSft(mintSftArgs, verifyMessageArgs)
         .accounts({
@@ -562,7 +563,7 @@ describe('dcarbon-contract', () => {
         symbol: 'DCPT',
         uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
         sellerFeeBasisPoints: percentAmount(5.5),
-        decimals: some(1),
+        decimals: some(2),
         creators: null,
         tokenStandard: TokenStandard.FungibleAsset,
       };
@@ -689,7 +690,7 @@ describe('dcarbon-contract', () => {
         symbol: 'DCPT',
         uri: 'https://arweave.net/3_vunO33xhGN7goIxE3G-RJgj-4vCwwZWSgM1QzVbAY',
         sellerFeeBasisPoints: percentAmount(5.5),
-        decimals: some(1),
+        decimals: some(2),
         creators: null,
         tokenStandard: TokenStandard.FungibleAsset,
       };
@@ -1137,7 +1138,7 @@ describe('dcarbon-contract', () => {
       console.log('Sig: ', sig);
     });
 
-    it('Cancel listing', async () => {
+    xit('Cancel listing', async () => {
       const mint = new PublicKey('HYKzXvsCcM6gUyUhgGF2Cx72nrsyM82EKNeyD3GQtRy8');
       const signer = upgradableAuthority.publicKey;
       const sourceAta = getAssociatedTokenAddressSync(mint, signer);

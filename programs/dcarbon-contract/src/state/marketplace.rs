@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::instructions::ListingArgs;
+use anchor_lang::prelude::*;
 
 #[account]
 #[derive(Debug, InitSpace)]

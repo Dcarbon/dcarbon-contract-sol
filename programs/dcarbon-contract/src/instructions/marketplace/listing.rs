@@ -3,9 +3,9 @@ use anchor_spl::token::Mint;
 use spl_token::instruction::approve_checked;
 use spl_token::solana_program::program::invoke;
 
-use crate::ID;
-use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo};
+use crate::state::{TokenListingInfo, MARKETPLACE_PREFIX_SEED};
 use crate::utils::cmp_pubkeys;
+use crate::ID;
 
 #[derive(InitSpace, Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct ListingArgs {
@@ -49,7 +49,8 @@ pub fn listing<'c: 'info, 'info>(
 
     invoke(
         &approve_checked_ins,
-        &[token_program.clone(),
+        &[
+            token_program.clone(),
             source_ata.clone(),
             mint.to_account_info(),
             delegate.to_account_info(),

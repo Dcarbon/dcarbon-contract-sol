@@ -1,16 +1,18 @@
-use anchor_lang::{prelude::*, system_program::{create_account, CreateAccount}};
 use anchor_lang::context::CpiContext;
+use anchor_lang::{
+    prelude::*,
+    system_program::{create_account, CreateAccount},
+};
 
 use crate::error::DCarbonError;
-use crate::ID;
 use crate::state::BpfWriter;
+use crate::ID;
 
 #[account]
 #[derive(Debug, InitSpace)]
 pub struct Master {
     pub master_key: Pubkey,
 }
-
 
 impl Master {
     pub const PREFIX_SEED: &'static [u8] = b"master";
@@ -49,8 +51,14 @@ impl Master {
 
             // Create account if it doesn't exist
             create_account(
-                CpiContext::new(system_program.to_account_info(), CreateAccount { from: payer.to_account_info(), to: master_pda.to_account_info() })
-                    .with_signer(&[seeds_signer]),
+                CpiContext::new(
+                    system_program.to_account_info(),
+                    CreateAccount {
+                        from: payer.to_account_info(),
+                        to: master_pda.to_account_info(),
+                    },
+                )
+                .with_signer(&[seeds_signer]),
                 Rent::get()?.minimum_balance(space.try_into().unwrap()),
                 space,
                 &ID,

@@ -1,9 +1,12 @@
-use anchor_lang::{prelude::*, system_program::{create_account, CreateAccount}};
 use anchor_lang::context::CpiContext;
+use anchor_lang::{
+    prelude::*,
+    system_program::{create_account, CreateAccount},
+};
 
 use crate::error::DCarbonError;
-use crate::ID;
 use crate::state::BpfWriter;
+use crate::ID;
 
 #[account]
 #[derive(Debug, InitSpace)]
@@ -23,7 +26,6 @@ impl Admin {
         let mut writer: BpfWriter<&mut [u8]> = BpfWriter::new(dst);
         Admin::try_serialize(self, &mut writer)
     }
-
 
     pub fn init<'info>(
         admin_pda: &'info AccountInfo<'info>,
@@ -49,8 +51,14 @@ impl Admin {
 
             // Create account if it doesn't exist
             create_account(
-                CpiContext::new(system_program, CreateAccount { from: payer, to: admin_pda.clone() })
-                    .with_signer(&[seeds_signer]),
+                CpiContext::new(
+                    system_program,
+                    CreateAccount {
+                        from: payer,
+                        to: admin_pda.clone(),
+                    },
+                )
+                .with_signer(&[seeds_signer]),
                 Rent::get()?.minimum_balance(space.try_into().unwrap()),
                 space,
                 &ID,

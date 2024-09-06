@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
-use crate::{ID, program::DcarbonContract};
 use crate::state::Master;
+use crate::{program::DcarbonContract, ID};
 
 pub fn init_master<'c: 'info, 'info>(
     ctx: Context<'_, '_, 'c, 'info, InitMaster<'info>>,
@@ -14,10 +14,18 @@ pub fn init_master<'c: 'info, 'info>(
 
     let master = next_account_info(remaining_accounts_iter).unwrap();
 
-    Master::init(master, signer.to_account_info(), system_program.to_account_info(), address)
+    Master::init(
+        master,
+        signer.to_account_info(),
+        system_program.to_account_info(),
+        address,
+    )
 }
 
-pub fn transfer_master_rights(ctx: Context<TransferMasterRights>, new_master_address: Pubkey) -> Result<()> {
+pub fn transfer_master_rights(
+    ctx: Context<TransferMasterRights>,
+    new_master_address: Pubkey,
+) -> Result<()> {
     let master = &mut ctx.accounts.master_pda;
     master.master_key = new_master_address;
     Ok(())

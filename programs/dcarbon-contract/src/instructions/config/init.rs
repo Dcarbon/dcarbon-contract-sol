@@ -1,13 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 
-use crate::ID;
 use crate::state::{ContractConfig, Governance, Master};
+use crate::ID;
 
-pub fn init_config(
-    ctx: Context<InitConfig>,
-    config_args: ConfigArgs,
-) -> Result<()> {
+pub fn init_config(ctx: Context<InitConfig>, config_args: ConfigArgs) -> Result<()> {
     let contract_config = &mut ctx.accounts.contract_config;
     let mint = &ctx.accounts.mint;
     let governance = &mut ctx.accounts.governance;

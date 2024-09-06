@@ -3,16 +3,16 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     metadata::{
         create_master_edition_v3, create_metadata_accounts_v3,
-        CreateMasterEditionV3, CreateMetadataAccountsV3, Metadata,
-        set_and_verify_sized_collection_item, SetAndVerifySizedCollectionItem,
+        set_and_verify_sized_collection_item, CreateMasterEditionV3, CreateMetadataAccountsV3,
+        Metadata, SetAndVerifySizedCollectionItem,
     },
-    token::{Mint, mint_to, MintTo, Token, TokenAccount},
+    token::{mint_to, Mint, MintTo, Token, TokenAccount},
 };
 use mpl_token_metadata::types::DataV2;
 
 use crate::error::DCarbonError;
-use crate::ID;
 use crate::instructions::{BurningRecord, SEED};
+use crate::ID;
 
 pub fn mint_nft(
     ctx: Context<MintNft>,
@@ -116,10 +116,7 @@ pub fn mint_nft(
                 update_authority: ctx.accounts.collection_mint.to_account_info(),
                 collection_mint: ctx.accounts.collection_mint.to_account_info(),
                 collection_metadata: ctx.accounts.collection_metadata_account.to_account_info(),
-                collection_master_edition: ctx
-                    .accounts
-                    .collection_master_edition
-                    .to_account_info(),
+                collection_master_edition: ctx.accounts.collection_master_edition.to_account_info(),
             },
             &[seeds_signer],
         ),
@@ -149,15 +146,11 @@ pub struct MintNft<'info> {
     pub collection_mint: Account<'info, Mint>,
 
     /// CHECK:
-    #[account(
-        mut,
-    )]
+    #[account(mut)]
     pub collection_metadata_account: UncheckedAccount<'info>,
 
     /// CHECK:
-    #[account(
-        mut,
-    )]
+    #[account(mut)]
     pub collection_master_edition: UncheckedAccount<'info>,
 
     #[account(
@@ -170,15 +163,11 @@ pub struct MintNft<'info> {
     pub nft_mint: Account<'info, Mint>,
 
     /// CHECK:
-    #[account(
-        mut,
-    )]
+    #[account(mut)]
     pub metadata_account: UncheckedAccount<'info>,
 
     /// CHECK:
-    #[account(
-        mut,
-    )]
+    #[account(mut)]
     pub master_edition: UncheckedAccount<'info>,
 
     #[account(

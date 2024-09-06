@@ -15,10 +15,10 @@ pub fn cancel_listing(ctx: Context<CancelListing>) -> Result<()> {
     assert_keys_equal(signer.key, &token_listing_info.owner)?;
 
     let revoke_ins = revoke(
-        &token_program.key(), 
-        &ctx.accounts.source_ata.key(), 
-        signer.key, 
-        &[]
+        &token_program.key(),
+        &ctx.accounts.source_ata.key(),
+        signer.key,
+        &[],
     )?;
 
     invoke(
@@ -32,7 +32,6 @@ pub fn cancel_listing(ctx: Context<CancelListing>) -> Result<()> {
 
     msg!("cancel_info-{}-{}", signer.key, token_listing_info.owner);
 
-    
     Ok(())
 }
 
@@ -59,5 +58,4 @@ pub struct CancelListing<'info> {
     #[account(mut)]
     /// CHECK:
     pub source_ata: AccountInfo<'info>,
-
 }

@@ -1,10 +1,13 @@
 use anchor_lang::prelude::*;
 
 use crate::error::DCarbonError;
-use crate::ID;
 use crate::state::*;
+use crate::ID;
 
-pub fn register_device(ctx: Context<RegisterDevice>, register_device_args: RegisterDeviceArgs) -> Result<()> {
+pub fn register_device(
+    ctx: Context<RegisterDevice>,
+    register_device_args: RegisterDeviceArgs,
+) -> Result<()> {
     let device = &mut ctx.accounts.device;
     let contract_config = &ctx.accounts.contract_config;
 
@@ -80,11 +83,13 @@ impl RegisterDeviceArgs {
             return Err(DCarbonError::InvalidDeviceId.into());
         }
 
-        if let Some(_) = device_limit_vec.iter_mut().find(|d| d.device_type == self.device_type) {
+        if let Some(_) = device_limit_vec
+            .iter_mut()
+            .find(|d| d.device_type == self.device_type)
+        {
             Ok(())
         } else {
             return Err(DCarbonError::InvalidDeviceType.into());
         }
     }
 }
-

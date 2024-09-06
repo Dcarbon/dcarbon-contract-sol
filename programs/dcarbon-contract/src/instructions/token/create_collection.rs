@@ -1,12 +1,15 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::metadata::{create_master_edition_v3, create_metadata_accounts_v3, CreateMasterEditionV3, CreateMetadataAccountsV3, Metadata, sign_metadata, SignMetadata};
-use anchor_spl::token::{Mint, mint_to, MintTo, Token, TokenAccount};
-use mpl_token_metadata::types::{CollectionDetails, Creator};
+use anchor_spl::metadata::{
+    create_master_edition_v3, create_metadata_accounts_v3, sign_metadata, CreateMasterEditionV3,
+    CreateMetadataAccountsV3, Metadata, SignMetadata,
+};
+use anchor_spl::token::{mint_to, Mint, MintTo, Token, TokenAccount};
 use mpl_token_metadata::types::DataV2;
+use mpl_token_metadata::types::{CollectionDetails, Creator};
 
-use crate::ID;
 use crate::state::Master;
+use crate::ID;
 
 #[constant]
 pub const SEED: &str = "Collection";
@@ -26,15 +29,18 @@ pub fn create_collection(
     seeds_signer.push(&binding);
 
     // mint collection nft
-    mint_to(CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        MintTo {
-            mint: ctx.accounts.collection_mint.to_account_info(),
-            to: ctx.accounts.token_account.to_account_info(),
-            authority: ctx.accounts.collection_mint.to_account_info(),
-        },
-        &[seeds_signer],
-    ), 1)?;
+    mint_to(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            MintTo {
+                mint: ctx.accounts.collection_mint.to_account_info(),
+                to: ctx.accounts.token_account.to_account_info(),
+                authority: ctx.accounts.collection_mint.to_account_info(),
+            },
+            &[seeds_signer],
+        ),
+        1,
+    )?;
 
     // create metadata account for collection nft
     create_metadata_accounts_v3(

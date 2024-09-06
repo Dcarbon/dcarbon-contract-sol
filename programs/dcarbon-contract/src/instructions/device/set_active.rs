@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::error::DCarbonError;
-use crate::ID;
 use crate::state::{Admin, Device, DeviceStatus};
+use crate::ID;
 
 pub fn set_active(ctx: Context<SetActive>, project_id: u16, device_id: u16) -> Result<()> {
     let device_status = &mut ctx.accounts.device_status;

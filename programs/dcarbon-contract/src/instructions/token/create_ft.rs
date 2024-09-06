@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
 use mpl_token_metadata::instructions::{CreateCpiBuilder, MintCpiBuilder};
 use mpl_token_metadata::types::{CreateArgs, MintArgs};
-use spl_token::instruction::{AuthorityType, set_authority};
+use spl_token::instruction::{set_authority, AuthorityType};
 use spl_token::solana_program::program::invoke_signed;
 
-use crate::ID;
 use crate::state::Master;
+use crate::ID;
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct CreateFtArgs {
@@ -100,7 +100,7 @@ pub fn create_ft<'c: 'info, 'info>(
             &[
                 mint.to_account_info(),
                 token_program.to_account_info(),
-                authority.to_account_info()
+                authority.to_account_info(),
             ],
             &[seeds_signer],
         )?;
@@ -120,7 +120,7 @@ pub fn create_ft<'c: 'info, 'info>(
             &[
                 mint.to_account_info(),
                 token_program.to_account_info(),
-                authority.to_account_info()
+                authority.to_account_info(),
             ],
             &[seeds_signer],
         )?;

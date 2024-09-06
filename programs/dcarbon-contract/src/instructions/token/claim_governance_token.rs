@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, self as token, Token, TokenAccount, Transfer, transfer};
+use anchor_spl::token::{self as token, transfer, Mint, Token, TokenAccount, Transfer};
 
 use crate::error::DCarbonError;
-use crate::ID;
 use crate::state::Governance;
+use crate::ID;
 
 pub fn claim_governance_token(ctx: Context<ClaimGovernanceToken>) -> Result<()> {
     let governance = &mut ctx.accounts.governance;
@@ -36,7 +36,10 @@ pub fn claim_governance_token(ctx: Context<ClaimGovernanceToken>) -> Result<()> 
         bind,
     );
 
-    transfer(cpi_ctx, (governance.amount * 10f64.powf(token_mint.decimals as f64)).round() as u64)?;
+    transfer(
+        cpi_ctx,
+        (governance.amount * 10f64.powf(token_mint.decimals as f64)).round() as u64,
+    )?;
 
     governance.amount = 0.0;
 

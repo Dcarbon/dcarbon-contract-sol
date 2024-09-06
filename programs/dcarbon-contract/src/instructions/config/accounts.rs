@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::state::{ContractConfig, Master};
 use crate::ID;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct SetConfig<'info> {

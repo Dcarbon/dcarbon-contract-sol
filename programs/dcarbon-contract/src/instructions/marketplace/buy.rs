@@ -7,9 +7,9 @@ use spl_token::solana_program::native_token::LAMPORTS_PER_SOL;
 use spl_token::solana_program::program::{invoke, invoke_signed};
 
 use crate::error::DCarbonError;
-use crate::ID;
-use crate::state::{MARKETPLACE_PREFIX_SEED, TokenListingInfo};
+use crate::state::{TokenListingInfo, MARKETPLACE_PREFIX_SEED};
 use crate::utils::assert_keys_equal;
+use crate::ID;
 
 pub fn buy<'c: 'info, 'info>(
     ctx: Context<'_, '_, 'c, 'info, Buy<'info>>,
@@ -80,13 +80,13 @@ pub fn buy<'c: 'info, 'info>(
                     (fee_amount * 10f64.powf(mint_data.decimals as f64)).round() as u64,
                     mint_data.decimals,
                 )
-                    .unwrap(),
+                .unwrap(),
                 &[
                     token_program.to_account_info(),
                     source.to_account_info(),
                     mint.to_account_info(),
                     destination.to_account_info(),
-                    signer.to_account_info()
+                    signer.to_account_info(),
                 ],
                 &[seeds_signer],
             )?;
@@ -116,7 +116,8 @@ pub fn buy<'c: 'info, 'info>(
         delegate.key,
         &[],
         (amount * 10f64.powf(mint.decimals as f64)).round() as u64,
-        mint.decimals)?;
+        mint.decimals,
+    )?;
 
     invoke_signed(
         &transfer_ins,
@@ -133,7 +134,14 @@ pub fn buy<'c: 'info, 'info>(
     // decrease token_listing_info
     token_listing_info.remaining -= amount;
 
-    msg!("buy_info-{}-{}-{}-{:?}-{}", token_owner.key, signer.key, amount, token_listing_info.currency, fee_amount);
+    msg!(
+        "buy_info-{}-{}-{}-{:?}-{}",
+        token_owner.key,
+        signer.key,
+        amount,
+        token_listing_info.currency,
+        fee_amount
+    );
 
     Ok(())
 }
