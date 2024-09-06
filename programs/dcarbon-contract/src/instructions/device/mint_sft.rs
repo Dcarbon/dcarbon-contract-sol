@@ -229,6 +229,7 @@ pub struct MintSft<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
+    /// CHECK:
     pub device_owner: AccountInfo<'info>,
 
     #[account(
@@ -272,9 +273,11 @@ pub struct MintSft<'info> {
     #[account(
         constraint = vault.key() == contract_config.vault,
     )]
+    /// CHECK:
     pub vault: AccountInfo<'info>,
 
     #[account(mut)]
+    /// CHECK:
     pub vault_ata: AccountInfo<'info>,
 
     #[account(

@@ -12,6 +12,7 @@ pub fn init_config(ctx: Context<InitConfig>, config_args: ConfigArgs) -> Result<
     // amount without decimal
     governance.amount = config_args.governance_amount;
     governance.mint = ctx.accounts.governance_mint.key();
+    governance.owner = ctx.accounts.signer.key();
 
     contract_config.assign(config_args, mint.key())
 }

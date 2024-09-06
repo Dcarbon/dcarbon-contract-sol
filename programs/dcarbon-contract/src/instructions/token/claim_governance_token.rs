@@ -54,11 +54,7 @@ pub struct ClaimGovernanceToken<'info> {
     )]
     pub signer: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = [Governance::PREFIX_SEED, signer.key().as_ref()],
-        bump
-    )]
+    #[account(mut)]
     pub governance: Box<Account<'info, Governance>>,
 
     // DCarbon
